@@ -1,0 +1,54 @@
+[project]
+name = "torch-einops-kit"
+version = "0.1.0"
+description = "Typed tensor-shaping, masking, padding, device-routing, and checkpoint utilities for PyTorch and `einops`. A superset of `lucidrains/torch-einops-utils` with similar utilities from other lucidrains packages. Adds strict typing, extensive tests, and comprehensive docstrings."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "CC-BY-NC-4.0"
+authors = [
+  { name = "Phil Wang", email = "lucidrains@gmail.com" },
+  { name = "Hunter Hogan", email = "HunterHogan@pm.me" }
+]
+maintainers = [{ name = "Hunter Hogan", email = "HunterHogan@pm.me" }]
+dependencies = [
+  "einops>=0.8.2",
+  "packaging>=26.0",
+  "torch>=2.10.0",
+  "typing-extensions>=4.0.0",
+]
+
+[project.urls]
+Donate = "https://www.patreon.com/integrated"
+Homepage = "https://github.com/hunterhogan/torch_einops_kit"
+Issues = "https://github.com/hunterhogan/torch_einops_kit/issues"
+Repository = "https://github.com/hunterhogan/torch_einops_kit.git"
+
+[dependency-groups]
+testing = [
+  "more-itertools>=11.0.2",
+  "numpy>=2.2.6",
+  "pytest>=9.0.3",
+  "pytest-cov>=7.1.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.8,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.coverage]
+report = { ignore_errors = false }
+run = { branch = true, data_file = "tests/coverage/.coverage", omit = [
+  "tests/*"
+], source = ["."] }
+
+[tool.pytest]
+addopts = ["--color=auto"]
+log_auto_indent = "On"
+testpaths = ["tests"]
+
+[tool.updateCitation]
+filenameCitationDOTcff = "CITATION.cff"
+pathFilenameCitationSSOT = "citations/CITATION.cff"
+
+[tool.uv]
+default-groups = ["testing"]
