@@ -881,7 +881,6 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "einops" },
-    { name = "packaging" },
     { name = "torch" },
     { name = "typing-extensions" },
 ]
@@ -898,7 +897,6 @@ testing = [
 [package.metadata]
 requires-dist = [
     { name = "einops", specifier = ">=0.8.2" },
-    { name = "packaging", specifier = ">=26.0" },
     { name = "torch", specifier = ">=2.10.0" },
     { name = "typing-extensions", specifier = ">=4.0.0" },
 ]

@@ -2,8 +2,8 @@
 
 Typed tensor-shaping, masking, padding, device-routing, and checkpoint utilities for PyTorch and `einops`.
 
-[![pip install torch_einops_kit](https://img.shields.io/badge/pip%20install-torch_einops_kit-gray.svg?colorB=3b434b)](https://pypi.org/project/torch_einops_kit/)
-[![uv add torch_einops_kit](https://img.shields.io/badge/uv%20add-torch_einops_kit-gray.svg?colorB=3b434b)](https://pypi.org/project/torch_einops_kit/)
+[![pip install torch-einops-kit](https://img.shields.io/badge/pip_install-torch--einops--kit-gray.svg?labelColor=blue)](https://pypi.org/project/torch-einops-kit/)
+[![uv add torch-einops-kit](https://img.shields.io/badge/uv_add-torch--einops--kit-gray.svg?labelColor=blue)](https://pypi.org/project/torch-einops-kit/)
 
 This repository is a superset of [`lucidrains/torch-einops-utils`](https://github.com/lucidrains/torch-einops-utils). The upstream repository is a compact collection of small utilities that show up repeatedly in lucidrains model repositories. `torch_einops_kit` keeps that role. The main difference is emphasis. This fork adds roughly 6000 lines of tests, typing, and docstrings so the utility layer is easier to trust, easier to search, and easier to apply correctly.
 
@@ -18,7 +18,7 @@ Use `torch_einops_kit` when you want strict typing, a `py.typed` marker, focused
 - Project name: `torch_einops_kit`.
 - Import path: `torch_einops_kit`.
 - Python requirement: `>=3.10`.
-- Runtime dependencies: `torch`, `einops`, `packaging`, and `typing-extensions`.
+- Runtime dependencies: `torch`, `einops`, and `typing-extensions`.
 - Root package exports: helper functions, slicing helpers, rank-alignment helpers, mask helpers, safe concatenation helpers, padding helpers, normalization helpers, and PyTree / `einops` helpers.
 - Submodules with dedicated imports: `torch_einops_kit.device`, `torch_einops_kit.einops`, `torch_einops_kit.save_load`, and `torch_einops_kit.scaleValues`.
 - Typing status: the package ships a `py.typed` marker and the repository uses strict type checking.
@@ -26,10 +26,16 @@ Use `torch_einops_kit` when you want strict typing, a `py.typed` marker, focused
 
 ## Installation
 
-Install from this repository with `uv`:
+### `uv`
 
 ```bash
-uv add git+https://github.com/hunterhogan/torch_einops_kit.git
+uv add torch_einops_kit
+```
+
+### `pip`
+
+```bash
+pip install torch_einops_kit
 ```
 
 ## Import map

@@ -20,7 +20,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from functools import wraps
-from packaging import version as packaging_version
 from pathlib import Path
 from torch.nn import Module
 from torch_einops_kit import (
@@ -299,13 +298,12 @@ def save_load(
 	-----
 	The generated save method writes a dictionary that is compatible with `torch.save` [5], and the
 	generated load paths read the dictionary with `torch.load` [6] on CPU before restoring state.
-	When `version` and the stored checkpoint version both exist and differ under
-	`packaging.version.parse` [7], the generated load method prints a notice but still restores the
-	stored model state.
+	When `version` and the stored checkpoint version are different, the generated load method prints
+	a notice but still restores the stored model state.
 
 	Examples
 	--------
-	From `tests.test_save_load.test_init_and_load` [8]:
+	From `tests.test_save_load.test_init_and_load` [7]:
 
 		```python
 		from pathlib import Path
@@ -327,7 +325,7 @@ def save_load(
 		restored_model = SimpleNet.init_and_load(str(path))
 		```
 
-	From `tests.test_save_load_extended` [9]:
+	From `tests.test_save_load_extended` [8]:
 
 		```python
 		import torch
@@ -367,11 +365,9 @@ def save_load(
 		https://pytorch.org/docs/stable/generated/torch.save.html
 	[6] torch.load - PyTorch documentation
 		https://pytorch.org/docs/stable/generated/torch.load.html
-	[7] packaging.version - packaging documentation
-		https://packaging.pypa.io/en/stable/version.html
-	[8] tests.test_save_load.test_init_and_load
+	[7] tests.test_save_load.test_init_and_load
 
-	[9] tests.test_save_load_extended.test_save_load_supports_custom_method_names_and_config_storage
+	[8] tests.test_save_load_extended.test_save_load_supports_custom_method_names_and_config_storage
 	"""
 	def _save_load(klass: type[TorchNNModule]) -> type[TorchNNModule]:
 		if not issubclass(klass, Module):
@@ -435,10 +431,8 @@ def save_load(
 			"""Restore model state from a checkpoint file.
 
 			You can use this method to load parameter values into an already-constructed decorated
-			module instance. The method reads the checkpoint via `torch.load` [1] on CPU, emits a
-			`UserWarning` when the stored version and the decoration-time version both exist and
-			differ under `packaging.version.parse` [2], and then restores parameter values via
-			`load_state_dict`.
+			module instance. The method reads the checkpoint via `torch.load` [1] on CPU, then
+			restores parameter values via `load_state_dict`.
 
 			Parameters
 			----------
@@ -460,16 +454,13 @@ def save_load(
 			Warns
 			-----
 			UserWarning
-				Emitted when the checkpoint's stored version and the decoration-time version both
-				exist and differ under `packaging.version.parse` [2].
+				Emitted when the checkpoint's stored version and the decoration-time version are
+				different [2].
 
 			References
 			----------
 			[1] torch.load - PyTorch documentation
 				https://pytorch.org/docs/stable/generated/torch.load.html
-
-			[2] packaging.version - packaging documentation
-				https://packaging.pypa.io/en/stable/version.html
 			"""
 			path = Path(path)
 			if not path.exists():
@@ -478,7 +469,7 @@ def save_load(
 
 			pkg: DehydratedCheckpoint = torch.load(str(path), map_location = 'cpu')
 
-			if exists(version) and exists(pkg['version']) and packaging_version.parse(version) != packaging_version.parse(pkg['version']):
+			if exists(version) and exists(pkg['version']) and (version != pkg['version']):
 				message: str = f'I received a checkpoint saved at version `{pkg["version"]}`, but the current package version is `{version}`.'
 				warnings.warn(message, UserWarning, stacklevel=2)
 
@@ -537,7 +528,7 @@ def save_load(
 		# set decorated init as well as save, load, and init_and_load
 
 		klass.__init__ = __init__  # ty:ignore[invalid-assignment]
-# TODO figure out how to use something like `wraps` to get the signature and docstring are public.
+# TODO figure out how to use something like `wraps` so the signature and docstring are public.
 		setattr(klass, save_method_name, _save)
 		setattr(klass, load_method_name, _load)
 		setattr(klass, init_and_load_classmethod_name, _init_and_load_from)

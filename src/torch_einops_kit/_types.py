@@ -192,8 +192,8 @@ class DehydratedCheckpoint(TypedDict):
 		`Module` instances with `DehydratedTorchNNModule` [9] reconstruction records.
 	version : str | None
 		An optional version string written at save time. When both the stored version and the
-		`save_load` `version` argument are set and differ under `packaging.version.parse` [10], the
-		generated load method prints a notice but still restores model state.
+		`save_load` `version` argument are different, the generated load method prints a notice but
+		still restores model state.
 
 	See Also
 	--------
@@ -220,9 +220,6 @@ class DehydratedCheckpoint(TypedDict):
 	[8] torch_einops_kit.save_load.dehydrate_config
 
 	[9] torch_einops_kit.DehydratedTorchNNModule
-
-	[10] packaging.version - packaging documentation
-		https://packaging.pypa.io/en/stable/version.html
 	"""
 	model: dict[str, Tensor]
 	config: bytes
