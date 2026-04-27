@@ -10,14 +10,22 @@ authors:
   family-names: Hogan
   email: HunterHogan@pm.me
 cff-version: 1.2.0
+commit: 15e583a5889adefbbe8ce99e2a66f0e09f60c69d
 contact:
 - given-names: Hunter
   family-names: Hogan
   email: HunterHogan@pm.me
+date-released: '2026-04-27'
+identifiers:
+- type: url
+  value: https://github.com/hunterhogan/torch_einops_kit/releases/tag/0.1.0
+  description: The URL for torch-einops-kit 0.1.0.
 license: CC-BY-NC-4.0
 message: Cite this software with the metadata in this file.
 repository: https://github.com/hunterhogan/torch_einops_kit.git
 repository-artifact: https://pypi.org/project/torch-einops-kit/0.1.0/
+repository-code: 
+  https://github.com/hunterhogan/torch_einops_kit/releases/tag/0.1.0
 title: torch-einops-kit
 url: https://github.com/hunterhogan/torch_einops_kit
 version: 0.1.0
