@@ -246,6 +246,32 @@ def torch_artifact_writer(temporary_artifact_path_builder: Callable[[str], Path]
 
 	return write_artifact
 
+# ======== scaleValues Infrastructure ========
+
+SCALE_VALUES_TENSORS: dict[str, Tensor] = {
+	'rank-1-primes-a': torch.tensor([2.0, 3.0, 5.0, 7.0]),
+	'rank-1-primes-b': torch.tensor([11.0, 13.0, 17.0]),
+	'rank-2-primes-a': torch.tensor([[19.0, 23.0, 29.0], [31.0, 37.0, 41.0]]),
+	'rank-2-primes-b': torch.tensor([[43.0, 47.0, 53.0], [59.0, 61.0, 67.0]]),
+}
+
+SCALE_VALUES_EXPECTED_TENSORS: dict[str, Tensor] = {
+	'rank-1-primes-a-exclusive-trailing': torch.tensor([0.0, 2.0, 5.0, 10.0]),
+	'rank-1-primes-b-exclusive-leading': torch.tensor([0.0, 11.0, 24.0]),
+	'rank-2-primes-a-exclusive-trailing': torch.tensor([[0.0, 19.0, 42.0], [0.0, 31.0, 68.0]]),
+	'rank-2-primes-b-exclusive-leading': torch.tensor([[0.0, 0.0, 0.0], [43.0, 47.0, 53.0]]),
+}
+
+@pytest.fixture
+def scale_values_tensor(request: pytest.FixtureRequest) -> Tensor:
+	tensor_key: str = request.param
+	return SCALE_VALUES_TENSORS[tensor_key]
+
+@pytest.fixture
+def scale_values_expected_tensor(request: pytest.FixtureRequest) -> Tensor:
+	expected_tensor_key: str = request.param
+	return SCALE_VALUES_EXPECTED_TENSORS[expected_tensor_key]
+
 # ======== map_values Infrastructure ========
 
 MAP_VALUES_INT_LEAF_CASES: list[object] = [pytest.param(2, id='leaf-int-2'), pytest.param(13, id='leaf-int-13'), pytest.param(89, id='leaf-int-89')]

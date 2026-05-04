@@ -47,9 +47,7 @@ from torch_einops_kit import (
     align_dims_left,
     and_masks,
     broadcast_cat,
-    l2norm,
     lens_to_mask,
-    masked_mean,
     maybe,
     once,
     or_masks,
@@ -91,6 +89,17 @@ from torch_einops_kit.save_load import (
     dehydrate_config,
     rehydrate_config,
     save_load,
+)
+```
+
+Import checkpoint decorators from `torch_einops_kit.scaleValues`:
+
+```python
+from torch_einops_kit.scaleValues import (
+    exclusive_cumsum,
+    l2norm,
+    RMSNorm,
+    masked_mean,
 )
 ```
 
@@ -251,13 +260,6 @@ These functions add numeric padding values along an existing tensor dimension.
 
 When `pad_lens=True` and `return_lens=True`, the second tensor contains padding widths rather than original lengths.
 
-### Normalization and masked reduction helpers
-
-| Name                                            | Contract                                                                                                                                                                                                                                                                                       |
-| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `l2norm(t)`                                     | Normalizes each vector in `t` to unit length along the last dimension by dividing by its L2 norm. Delegates to `torch.nn.functional.normalize` with `p=2` and `dim=-1`.                                                                                                                        |
-| `masked_mean(t, mask=None, dim=None, eps=1e-5)` | Computes a masked mean. When `mask is None`, the function falls back to `t.mean(...)`. When no masked position is selected and `dim is None`, the function returns zero by summing over the empty selection. When `mask.ndim < t.ndim`, the function right-pads mask rank before broadcasting. |
-
 ### PyTree helpers
 
 | Name                              | Contract                                                                                                                                                               |
@@ -267,10 +269,11 @@ When `pad_lens=True` and `return_lens=True`, the second tensor contains padding 
 
 ## `scaleValues` submodule reference
 
-The `torch_einops_kit.scaleValues` submodule contains vector normalization, masked mean computation, and the `RMSNorm` layer. `l2norm` and `masked_mean` are also re-exported from the package root.
+The `torch_einops_kit.scaleValues` submodule contains exclusive prefix sums, vector normalization, masked mean computation, and the `RMSNorm` layer.
 
 | Name                                            | Contract                                                                                                                                                                                                                                                                                       |
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `exclusive_cumsum(t, dim=-1)`                   | Computes the exclusive prefix sum of `t` along `dim`. Each output position receives the sum of all elements that strictly precede it along `dim`. The element at index zero is always zero.                                                                                                    |
 | `l2norm(t)`                                     | Normalizes each vector in `t` to unit length along the last dimension. Delegates to `torch.nn.functional.normalize` with `p=2` and `dim=-1`.                                                                                                                                                   |
 | `masked_mean(t, mask=None, dim=None, eps=1e-5)` | Computes a masked mean. When `mask is None`, the function falls back to `t.mean(...)`. When no masked position is selected and `dim is None`, the function returns zero by summing over the empty selection. When `mask.ndim < t.ndim`, the function right-pads mask rank before broadcasting. |
 | `RMSNorm(dim)`                                  | `torch.nn.Module` that normalizes the last feature axis to unit length, multiplies by `√dim`, and applies a learned per-feature `gamma` parameter. Use as a pre-normalization layer before attention, feedforward, or linear projection sublayers in transformer-style modules.                |

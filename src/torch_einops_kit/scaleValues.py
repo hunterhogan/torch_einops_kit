@@ -1,12 +1,14 @@
-"""Provide vector normalization, masked mean computation, and learned RMS normalization.
+"""Provide exclusive prefix sums, vector normalization, masked mean computation, and learned RMS normalization.
 
-You can use this module to normalize feature vectors to unit length, compute masked mean
-reductions over selected tensor positions, and apply learned root-mean-square normalization
-to transformer and neural network feature channels.
+You can use this module to compute exclusive prefix sums of tensors, normalize feature vectors
+to unit length, compute masked mean reductions over selected tensor positions, and apply learned
+root-mean-square normalization to transformer and neural network feature channels.
 
 Contents
 --------
 Functions
+	exclusive_cumsum
+		Compute the exclusive prefix sum of a `Tensor` along a dimension.
 	l2norm
 		Normalize `Tensor` vectors to unit length along the last dimension.
 	masked_mean
@@ -23,6 +25,47 @@ from torch.nn import Module
 from torch_einops_kit import exists, pad_right_ndim
 import torch
 import torch.nn.functional as F
+
+def exclusive_cumsum(t: Tensor, dim: int = -1) -> Tensor:
+	"""Compute the exclusive prefix sum of `Tensor` `t` along its dimension `dim`.
+
+	You can use `exclusive_cumsum` to produce a shifted cumulative sum where each output
+	position accumulates only the elements that strictly precede it along `dim`. The element
+	at index zero is always zero. This operation is useful for converting absolute segment
+	lengths into starting offsets.
+
+	Parameters
+	----------
+	t : Tensor
+		Input `Tensor` to reduce.
+	dim : int = -1
+		Dimension along which to compute the exclusive prefix sum. Negative values index
+		from the last axis.
+
+	Returns
+	-------
+	exclusivePrefixSum : Tensor
+		`Tensor` with the same shape as `t` where `exclusivePrefixSum[..., i, ...]` equals
+		the sum of all elements of `t` with index strictly less than `i` along `dim`.
+
+	Mathematical Basis
+	------------------
+	Let t = [t₀, t₁, ..., tₙ₋₁] be the elements of `t` along `dim`. The exclusive prefix
+	sum S is defined element-wise as:
+
+		S[i] = Σⱼ₌₀^(i−1) tⱼ,  with S[0] = 0.
+
+	Equivalently, S equals the inclusive cumulative sum minus `t`:
+
+		S = cumsum(t, dim) − t.
+
+	References
+	----------
+	[1] torch.Tensor.cumsum - PyTorch documentation
+		https://pytorch.org/docs/stable/generated/torch.Tensor.cumsum.html
+	"""
+	return t.cumsum(dim = dim) - t
+
 
 def l2norm(t: Tensor) -> Tensor:
 	"""Normalize `Tensor` vectors to unit length.

@@ -92,10 +92,6 @@ pad_sequence_and_cat
 
 Utilities
 ---------
-l2norm
-	Normalize `Tensor` vectors to unit length along the last dimension.
-masked_mean
-	Compute a mean over positions selected by a boolean mask.
 tree_flatten_with_inverse
 	Flatten a PyTree and return an inverse reconstruction function.
 tree_map_tensor
@@ -110,7 +106,7 @@ einops
 save_load
 	Decorate `torch.nn.Module` subclasses with checkpoint save, load, and reconstruction helpers.
 scaleValues
-	Normalize feature vectors and compute masked means.
+	Compute exclusive prefix sums, normalize feature vectors, and compute masked means.
 """
 # isort: split
 from torch_einops_kit._semiotics import decreasing as decreasing, zeroIndexed as zeroIndexed

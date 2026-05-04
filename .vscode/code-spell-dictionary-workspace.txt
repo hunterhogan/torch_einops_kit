@@ -8,9 +8,11 @@ broadcastable
 capsys
 coor
 ction
+cumsum
 dlpack
 einops
 einsum
+feedforward
 FIRSTPARTY
 freqs
 gateloop

@@ -1,9 +1,33 @@
 from __future__ import annotations
 
 from torch import Tensor
-from torch_einops_kit.scaleValues import l2norm, masked_mean, RMSNorm
+from torch_einops_kit.scaleValues import exclusive_cumsum, l2norm, masked_mean, RMSNorm
 import pytest
 import torch
+
+@pytest.mark.parametrize(
+	('scale_values_tensor', 'reductionDim', 'scale_values_expected_tensor'),
+	[
+		pytest.param('rank-1-primes-a', -1, 'rank-1-primes-a-exclusive-trailing', id='rank-1-trailing'),
+		pytest.param('rank-1-primes-b', 0, 'rank-1-primes-b-exclusive-leading', id='rank-1-leading'),
+		pytest.param('rank-2-primes-a', -1, 'rank-2-primes-a-exclusive-trailing', id='rank-2-trailing'),
+		pytest.param('rank-2-primes-b', 0, 'rank-2-primes-b-exclusive-leading', id='rank-2-leading'),
+	],
+	indirect=['scale_values_tensor', 'scale_values_expected_tensor'],
+)
+def test_exclusive_cumsum(scale_values_tensor: Tensor, reductionDim: int, scale_values_expected_tensor: Tensor) -> None:
+	inputTensor = scale_values_tensor
+	expectedTensor = scale_values_expected_tensor
+	resultTensor = exclusive_cumsum(inputTensor, dim=reductionDim)
+
+	assert resultTensor.shape == expectedTensor.shape, (
+		f"exclusive_cumsum returned shape {tuple(resultTensor.shape)}, expected {tuple(expectedTensor.shape)} "
+		f"for input shape {tuple(inputTensor.shape)} and {reductionDim=}."
+	)
+	assert torch.equal(resultTensor, expectedTensor), (
+		f"exclusive_cumsum returned {resultTensor}, expected {expectedTensor} "
+		f"for input {inputTensor} and {reductionDim=}."
+	)
 
 @pytest.mark.parametrize(
 	"tolerance",
