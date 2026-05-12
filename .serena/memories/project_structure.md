@@ -1,0 +1,7 @@
+- `src/torch_einops_kit/`: package source.
+- Public-facing modules: `device.py`, `einops.py`, `nn.py`, `save_load.py`, `scaleValues.py`, `utils.py`, and `__init__.py` for re-exports.
+- Internal support modules: `_cat_and_stack.py`, `_dimensions.py`, `_helpers.py`, `_masking.py`, `_padding.py`, `_semiotics.py`, `_slicing.py`, `_theTypes.py`.
+- `tests/`: feature-oriented pytest suite (`test_cat_stack.py`, `test_padding.py`, `test_save_load.py`, etc.).
+- `tests/conftest.py`: shared pytest fixtures and reusable test infrastructure.
+- `tests/dataSamples/`: deterministic test data storage.
+- Root config: `.editorconfig`, `pyproject.toml`, `pyrightconfig.json`, `ruff.toml`, `ty.toml`, `context7.json`.

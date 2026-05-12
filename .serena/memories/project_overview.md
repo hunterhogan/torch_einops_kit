@@ -1,0 +1,6 @@
+- Purpose: `torch_einops_kit` is a typed PyTorch and `einops` utility library for tensor shaping, masking, padding, device routing, lightweight `nn.Module` adapters, and checkpoint reconstruction.
+- Relationship: typed, documented, test-heavy superset of `lucidrains/torch-einops-utils`; import path is `torch_einops_kit`.
+- Tech stack: Python >= 3.10, `torch`, `einops`, `typing-extensions`, `pytest`, `pytest-cov`, `ruff`, strict `pyright` / Pylance settings, `uv_build`.
+- Package shape: root package re-exports many helpers; dedicated public modules include `device.py`, `einops.py`, `nn.py`, `save_load.py`, `scaleValues.py`, and `utils.py`.
+- No standalone CLI or `project.scripts` entrypoint is declared. Treat this repository as an importable library, not a command-line app.
+- Current development context: Windows workspace.
