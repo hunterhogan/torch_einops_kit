@@ -2,6 +2,9 @@
 
 These are from the semiotics module in `hunterMakesPy`. https://github.com/hunterhogan/hunterMakesPy
 """
+
+from __future__ import annotations
+
 decreasing: int = -1
 """Express descending iteration or a reverse direction.
 

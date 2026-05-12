@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
 from torch import broadcast_tensors, cat, stack, Tensor  # pyright: ignore[reportUnknownVariableType]
 from torch_einops_kit import safe
-from typing import cast
+from typing import cast, TYPE_CHECKING
+
+if TYPE_CHECKING:
+	from collections.abc import Sequence
 
 def broadcast_cat(tensors: Sequence[Tensor], dim: int = -1) -> Tensor:
 	"""Broadcast tensor groups before concatenation.
@@ -29,10 +31,10 @@ def broadcast_cat(tensors: Sequence[Tensor], dim: int = -1) -> Tensor:
 	[1] PyTorch - Context7
 		https://context7.com/pytorch/pytorch
 	"""
-	return cat(cast(list[Tensor], broadcast_tensors(*tensors)), dim)
+	return cat(cast('list[Tensor]', broadcast_tensors(*tensors)), dim)
 
 @safe
-def safe_cat(tensors: Sequence[Tensor], dim: int = 0) -> Tensor | None:
+def safe_cat(tensors: tuple[Tensor, ...] | list[Tensor], dim: int = 0) -> Tensor | None:
 	"""Concatenate tensors from `tensors` along an existing dimension, skipping `None` values.
 
 	You can use `safe_cat` to concatenate a mixed sequence of `Tensor` and `None` values. The `safe`
@@ -45,7 +47,7 @@ def safe_cat(tensors: Sequence[Tensor], dim: int = 0) -> Tensor | None:
 
 	Parameters
 	----------
-	tensors : Sequence[Tensor | None]
+	tensors : tuple[Tensor | None, ...] | list[Tensor | None]
 		A sequence of `Tensor` or `None` values. `None` values are filtered out before concatenation.
 		All non-`None` `Tensor` values must have the same shape in every dimension except `dim`.
 	dim : int = 0
@@ -79,9 +81,9 @@ def safe_cat(tensors: Sequence[Tensor], dim: int = 0) -> Tensor | None:
 	From sdft_pytorch [4], accumulating per-step token losses across a generation loop where
 	`token_kl_div_losses` is initialized to `None` before the loop:
 
-		```python
+	```python
 		token_kl_div_losses = safe_cat((token_kl_div_losses, token_kl_div), dim=1)
-		```
+	```
 
 	References
 	----------
@@ -94,10 +96,10 @@ def safe_cat(tensors: Sequence[Tensor], dim: int = 0) -> Tensor | None:
 	[4] lucidrains/sdft-pytorch
 		https://github.com/lucidrains/sdft-pytorch
 	"""
-	return cat(tensors, dim = dim)  # pyright: ignore[reportUnknownVariableType, reportCallIssue, reportArgumentType] https://github.com/pytorch/pytorch/issues/179391  # ty:ignore[no-matching-overload]
+	return None if len(tensors) == 0 else cat(tensors, dim=dim)
 
 @safe
-def safe_stack(tensors: Sequence[Tensor], dim: int = 0) -> Tensor | None:
+def safe_stack(tensors: tuple[Tensor, ...] | list[Tensor], dim: int = 0) -> Tensor | None:
 	"""Stack tensors from `tensors` along a new dimension, skipping `None` values.
 
 	You can use `safe_stack` to stack a mixed sequence of `Tensor` and `None` values. The `safe` [1]
@@ -106,8 +108,8 @@ def safe_stack(tensors: Sequence[Tensor], dim: int = 0) -> Tensor | None:
 
 	Parameters
 	----------
-	tensors : Sequence[Tensor | None]
-		A `Sequence` of `Tensor` or `None` values. `None` values are filtered out before stacking.
+	tensors : tuple[Tensor | None, ...] | list[Tensor | None]
+		A sequence of `Tensor` or `None` values. `None` values are filtered out before stacking.
 		All non-`None` `Tensor` values must have the same shape.
 	dim : int = 0
 		The dimension along which to stack. The result has one more dimension than each input
@@ -163,10 +165,10 @@ def safe_stack(tensors: Sequence[Tensor], dim: int = 0) -> Tensor | None:
 	[4] lucidrains/dreamer4
 		https://github.com/lucidrains/dreamer4
 	"""
-	return stack(tensors, dim = dim)  # pyright: ignore[reportArgumentType] https://github.com/pytorch/pytorch/issues/179391  # ty:ignore[invalid-argument-type]
+	return None if len(tensors) == 0 else stack(tensors, dim=dim)
 
 """
-Some or all of the logic in this module may be protected by the following.
+Some of the logic in this module may be protected by the following.
 
 MIT License
 

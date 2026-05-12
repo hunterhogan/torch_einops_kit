@@ -1,11 +1,10 @@
+from __future__ import annotations
+
 from torch import Tensor
 from torch_einops_kit import exists
 import torch
 
-def shape_with_replace(
-	t: Tensor,
-	replace_dict: dict[int, int] | None = None
-) -> torch.Size:
+def shape_with_replace(t: Tensor, replace_dict: dict[int, int] | None = None) -> torch.Size:
 	"""Return the shape of a tensor with selected dimension sizes replaced by new values.
 
 	You can use this function to compute a target shape derived from an existing tensor, substituting
@@ -43,7 +42,7 @@ def shape_with_replace(
 	--------
 	From `dreamer4.trainers` [1] and the test suite:
 
-		```python
+	```python
 		import torch
 		from torch_einops_kit import shape_with_replace
 
@@ -61,7 +60,7 @@ def shape_with_replace(
 		# Allocate future-frame noise with the latent shape — from mimic-video
 		pred_shape = shape_with_replace(latents, {2: predict_num_future_latents})
 		future_noise = torch.randn(pred_shape, device=latents.device)
-		```
+	```
 
 	References
 	----------
@@ -81,7 +80,7 @@ def shape_with_replace(
 
 	for index, value in replace_dict.items():
 		if index >= len(shape_list):
-			message: str = f"I received `{index = }`, but I need `index` to be less than `{len(shape_list) = }`."
+			message: str = f'I received `{index = }`, but I need `index` to be less than `{len(shape_list) = }`.'
 			raise ValueError(message)
 		shape_list[index] = value
 
@@ -122,7 +121,7 @@ def slice_at_dim(t: Tensor, slc: slice, dim: int = -1) -> Tensor:
 	From the test suite and external usage in `alphafold3_pytorch` [1] and `rotary_embedding_torch`
 	[2]:
 
-		```python
+	```python
 		import torch
 		from torch_einops_kit import slice_at_dim
 
@@ -146,7 +145,7 @@ def slice_at_dim(t: Tensor, slc: slice, dim: int = -1) -> Tensor:
 		# Shift-and-concatenate for windowed attention (alphafold3)
 		left = slice_at_dim(t, slice(None, -1), dim=dim_seq)
 		right = slice_at_dim(t, slice(1, None), dim=dim_seq)
-		```
+	```
 
 	References
 	----------
@@ -195,7 +194,7 @@ def slice_left_at_dim(t: Tensor, length: int, dim: int = -1) -> Tensor:
 	--------
 	From the test suite:
 
-		```python
+	```python
 		import torch
 		from torch_einops_kit import slice_left_at_dim
 
@@ -203,7 +202,7 @@ def slice_left_at_dim(t: Tensor, length: int, dim: int = -1) -> Tensor:
 
 		res = slice_left_at_dim(t, 2, dim=1)
 		assert res.shape == (3, 2, 5)
-		```
+	```
 
 	References
 	----------
@@ -211,9 +210,9 @@ def slice_left_at_dim(t: Tensor, length: int, dim: int = -1) -> Tensor:
 
 	"""
 	if length == 0:
-		return slice_at_dim(t, slice(0, 0), dim = dim)
+		return slice_at_dim(t, slice(0, 0), dim=dim)
 
-	return slice_at_dim(t, slice(None, length), dim = dim)
+	return slice_at_dim(t, slice(None, length), dim=dim)
 
 def slice_right_at_dim(t: Tensor, length: int, dim: int = -1) -> Tensor:
 	"""Select a suffix of a given length from one dimension of a tensor.
@@ -248,7 +247,7 @@ def slice_right_at_dim(t: Tensor, length: int, dim: int = -1) -> Tensor:
 	--------
 	From the test suite and `PoPE_pytorch` [1]:
 
-		```python
+	```python
 		import torch
 		from torch_einops_kit import slice_right_at_dim
 
@@ -260,7 +259,7 @@ def slice_right_at_dim(t: Tensor, length: int, dim: int = -1) -> Tensor:
 
 		# Trim precomputed positional frequencies to the query length (PoPE)
 		freqs = slice_right_at_dim(freqs, q_len, dim=-2)
-		```
+	```
 
 	References
 	----------
@@ -270,9 +269,9 @@ def slice_right_at_dim(t: Tensor, length: int, dim: int = -1) -> Tensor:
 
 	"""
 	if length == 0:
-		return slice_at_dim(t, slice(0, 0), dim = dim)
+		return slice_at_dim(t, slice(0, 0), dim=dim)
 
-	return slice_at_dim(t, slice(-length, None), dim = dim)
+	return slice_at_dim(t, slice(-length, None), dim=dim)
 
 """
 Some or all of the logic in this module may be protected by the following.

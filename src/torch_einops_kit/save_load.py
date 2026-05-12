@@ -16,18 +16,21 @@ Functions
 	save_load
 		Decorate a `torch.nn.Module` subclass with checkpoint save, load, and reconstruct helpers.
 """
+
 from __future__ import annotations
 
-from collections.abc import Callable
 from functools import wraps
 from pathlib import Path
 from torch.nn import Module
 from torch_einops_kit import (
 	ConfigArgsKwargs, DehydratedCheckpoint, DehydratedTorchNNModule, exists, map_values, StrPath, TorchNNModule, TVar)
-from typing import Any, cast, overload
+from typing import Any, cast, overload, TYPE_CHECKING
 import pickle
 import torch
 import warnings
+
+if TYPE_CHECKING:
+	from collections.abc import Callable
 
 def dehydrate_config(config: TVar, config_instance_var_name: str) -> TVar:
 	"""Convert nested decorated modules in `config` into reconstruction records.
@@ -67,14 +70,14 @@ def dehydrate_config(config: TVar, config_instance_var_name: str) -> TVar:
 	--------
 	From `tests.test_save_load_extended.test_dehydrate_config_respects_config_instance_var_name` [4]:
 
-		```python
+	```python
 		from torch_einops_kit.save_load import dehydrate_config
 		from tests.test_save_load_extended import SaveLoadExtendedCustomNamedModel
 
 		custom_model = SaveLoadExtendedCustomNamedModel(13)
 		config_args_kwargs = ((custom_model,), {})
 		dehydrated_config = dehydrate_config(config_args_kwargs, 'stored_config')
-		```
+	```
 
 	References
 	----------
@@ -86,6 +89,7 @@ def dehydrate_config(config: TVar, config_instance_var_name: str) -> TVar:
 
 	[4] tests.test_save_load_extended.test_dehydrate_config_respects_config_instance_var_name
 	"""
+
 	@overload
 	def dehydrate(v: Module) -> DehydratedTorchNNModule: ...
 	@overload
@@ -119,12 +123,12 @@ def dehydrate_config(config: TVar, config_instance_var_name: str) -> TVar:
 		"""
 		if isinstance(v, Module) and hasattr(v, config_instance_var_name):
 			return DehydratedTorchNNModule(
-				__save_load_module__ = True,
-				klass = v.__class__,
-				config = dehydrate_config(getattr(v, config_instance_var_name), config_instance_var_name)
+				__save_load_module__=True,
+				klass=v.__class__,
+				config=dehydrate_config(getattr(v, config_instance_var_name), config_instance_var_name),
 			)
 
-		return cast(TVar, v)
+		return cast('TVar', v)
 
 	return map_values(dehydrate, config)
 
@@ -164,23 +168,17 @@ def rehydrate_config(config: ConfigArgsKwargs) -> ConfigArgsKwargs:
 	--------
 	From `tests.test_save_load_extended` [5]:
 
-		```python
+	```python
 		from torch_einops_kit.save_load import rehydrate_config
 		from tests.test_save_load_extended import SaveLoadExtendedLinearModel
 
 		config_args_kwargs = (
-			(
-				{
-					'__save_load_module__': True,
-					'klass': SaveLoadExtendedLinearModel,
-					'config': ((7, 11), {}),
-				},
-			),
+			({'__save_load_module__': True, 'klass': SaveLoadExtendedLinearModel, 'config': ((7, 11), {})},),
 			{'tag': 'manual-dehydrated-config'},
 		)
 
 		rehydrated_config = rehydrate_config(config_args_kwargs)
-		```
+	```
 
 	References
 	----------
@@ -194,6 +192,7 @@ def rehydrate_config(config: ConfigArgsKwargs) -> ConfigArgsKwargs:
 
 	[5] tests.test_save_load_extended.test_rehydrate_config_instantiates_manual_dehydrated_modules
 	"""
+
 	@overload
 	def rehydrate(v: ConfigArgsKwargs) -> ConfigArgsKwargs: ...
 	@overload
@@ -227,7 +226,7 @@ def rehydrate_config(config: ConfigArgsKwargs) -> ConfigArgsKwargs:
 			args, kwargs = v['config']
 			return klass(*args, **kwargs)
 
-		return cast(ConfigArgsKwargs, v)
+		return cast('ConfigArgsKwargs', v)
 
 	return map_values(rehydrate, config)
 
@@ -305,7 +304,7 @@ def save_load(
 	--------
 	From `tests.test_save_load.test_init_and_load` [7]:
 
-		```python
+	```python
 		from pathlib import Path
 
 		from torch import nn
@@ -323,11 +322,11 @@ def save_load(
 		model = SimpleNet(10, 20)
 		model.save(str(path))
 		restored_model = SimpleNet.init_and_load(str(path))
-		```
+	```
 
 	From `tests.test_save_load_extended` [8]:
 
-		```python
+	```python
 		import torch
 		from torch import nn
 		from torch_einops_kit.save_load import save_load
@@ -346,10 +345,8 @@ def save_load(
 
 		model = SaveLoadExtendedCustomNamedModel(13)
 		model.store('save-load-custom-methods.pt')
-		restored_model = SaveLoadExtendedCustomNamedModel.create_and_restore(
-			'save-load-custom-methods.pt'
-		)
-		```
+		restored_model = SaveLoadExtendedCustomNamedModel.create_and_restore('save-load-custom-methods.pt')
+	```
 
 	References
 	----------
@@ -369,6 +366,7 @@ def save_load(
 
 	[8] tests.test_save_load_extended.test_save_load_supports_custom_method_names_and_config_storage
 	"""
+
 	def _save_load(klass: type[TorchNNModule]) -> type[TorchNNModule]:
 		if not issubclass(klass, Module):
 			message: str = 'save_load should decorate a subclass of torch.nn.Module'
@@ -420,9 +418,7 @@ def save_load(
 
 			config = getattr(self, config_instance_var_name)
 			pkg = DehydratedCheckpoint(
-				model = self.state_dict(),
-				config = pickle.dumps(dehydrate_config(config, config_instance_var_name)),
-				version = version,
+				model=self.state_dict(), config=pickle.dumps(dehydrate_config(config, config_instance_var_name)), version=version
 			)
 
 			torch.save(pkg, str(path))
@@ -467,13 +463,15 @@ def save_load(
 				message: str = f'I received `{path = }`, but no file exists at that path.'
 				raise FileNotFoundError(message)
 
-			pkg: DehydratedCheckpoint = torch.load(str(path), map_location = 'cpu')
+			pkg: DehydratedCheckpoint = torch.load(str(path), map_location='cpu')
 
 			if exists(version) and exists(pkg['version']) and (version != pkg['version']):
-				message: str = f'I received a checkpoint saved at version `{pkg["version"]}`, but the current package version is `{version}`.'
+				message: str = (
+					f'I received a checkpoint saved at version `{pkg["version"]}`, but the current package version is `{version}`.'
+				)
 				warnings.warn(message, UserWarning, stacklevel=2)
 
-			self.load_state_dict(pkg['model'], strict = strict)
+			self.load_state_dict(pkg['model'], strict=strict)
 
 		@classmethod
 		def _init_and_load_from(cls: type[TorchNNModule], path: StrPath | Path, *, strict: bool = True) -> TorchNNModule:
@@ -512,7 +510,7 @@ def save_load(
 			if not path.exists():
 				message: str = f'I received `{path = }`, but no file exists at that path.'
 				raise FileNotFoundError(message)
-			pkg: DehydratedCheckpoint = torch.load(str(path), map_location = 'cpu')
+			pkg: DehydratedCheckpoint = torch.load(str(path), map_location='cpu')
 
 			if 'config' not in pkg:
 				message: str = 'model configs were not found in this saved checkpoint'
@@ -522,13 +520,13 @@ def save_load(
 			args, kwargs = rehydrate_config(config)
 			model: TorchNNModule = cls(*args, **kwargs)
 
-			_load(model, path, strict = strict)
+			_load(model, path, strict=strict)
 			return model
 
 		# set decorated init as well as save, load, and init_and_load
 
 		klass.__init__ = __init__  # ty:ignore[invalid-assignment]
-# TODO figure out how to use something like `wraps` so the signature and docstring are public.
+		# TODO figure out how to use something like `wraps` so the signature and docstring are public.
 		setattr(klass, save_method_name, _save)
 		setattr(klass, load_method_name, _load)
 		setattr(klass, init_and_load_classmethod_name, _init_and_load_from)

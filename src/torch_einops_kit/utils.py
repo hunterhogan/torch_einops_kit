@@ -11,12 +11,15 @@ Functions
 	tree_map_tensor
 		Apply a function to every tensor leaf in a PyTree, leaving non-tensor leaves unchanged.
 """
+
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
 from torch import is_tensor, Tensor
 from torch.utils._pytree import PyTree, tree_flatten, tree_map, tree_unflatten
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+	from collections.abc import Callable, Iterable
 
 def tree_map_tensor(fn: Callable[[Tensor], Tensor], tree: PyTree) -> PyTree:
 	"""Apply `fn` to every `torch.Tensor` leaf in `tree`, leaving non-tensor leaves unchanged.
@@ -47,7 +50,7 @@ def tree_map_tensor(fn: Callable[[Tensor], Tensor], tree: PyTree) -> PyTree:
 	--------
 	Increment only the tensor leaf while preserving non-tensor leaves [3]:
 
-		```python
+	```python
 		from torch import tensor
 		from torch_einops_kit import tree_map_tensor
 
@@ -56,15 +59,15 @@ def tree_map_tensor(fn: Callable[[Tensor], Tensor], tree: PyTree) -> PyTree:
 		# result[0] == 1
 		# result[1] == tensor(3)
 		# result[2] == 3
-		```
+	```
 
 	Detach all tensors nested inside a state container [4]:
 
-		```python
+	```python
 		from torch_einops_kit import tree_map_tensor
 
 		nextMemory = tree_map_tensor(lambda t: t.detach(), nextMemory)
-		```
+	```
 
 	References
 	----------
@@ -77,6 +80,7 @@ def tree_map_tensor(fn: Callable[[Tensor], Tensor], tree: PyTree) -> PyTree:
 	[4] fast_weight_attention.chunk_manager.ChunkManager.forward
 		https://context7.com/lucidrains/fast-weight-attention
 	"""
+
 	def func(t: object) -> object:
 		if is_tensor(t):
 			return fn(t)
@@ -113,14 +117,14 @@ def tree_flatten_with_inverse(tree: PyTree) -> tuple[list[Any], Callable[[Iterab
 	--------
 	Modify a single leaf and reconstruct the original nested structure [3]:
 
-		```python
+	```python
 		from torch_einops_kit import tree_flatten_with_inverse
 
 		tree = (1, (2, 3), 4)
 		(first, *rest), inverse = tree_flatten_with_inverse(tree)
 		result = inverse((first + 1, *rest))
 		# result == (2, (2, 3), 4)
-		```
+	```
 
 	References
 	----------
@@ -137,7 +141,6 @@ def tree_flatten_with_inverse(tree: PyTree) -> tuple[list[Any], Callable[[Iterab
 		return tree_unflatten(out, spec)
 
 	return flattened, inverse
-
 
 """
 Some or all of the logic in this module may be protected by the following.

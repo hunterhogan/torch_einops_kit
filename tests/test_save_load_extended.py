@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from pathlib import Path
 from torch import nn
 from torch.nn import Module
 from torch_einops_kit import map_values
 from torch_einops_kit.save_load import dehydrate_config, rehydrate_config, save_load
-from typing import Any, cast, Protocol, TypeAlias
+from typing import Any, cast, Protocol, TYPE_CHECKING, TypeAlias
 import pytest
 import torch
+
+if TYPE_CHECKING:
+	from collections.abc import Callable
+	from pathlib import Path
 
 ConfigArgsKwargsObject: TypeAlias = tuple[tuple[Any, ...], dict[Any, Any]]
 
@@ -152,10 +154,10 @@ def _build_save_load_extended_config_case(config_case_key: str) -> tuple[ConfigA
 
 def _collect_dehydrated_module_records(config_value: object) -> list[dict[str, object]]:
 	if isinstance(config_value, dict):
-		dictionary_value = cast(dict[object, object], config_value)
+		dictionary_value = cast('dict[object, object]', config_value)
 		records: list[dict[str, object]] = []
 		if bool(dictionary_value.get('__save_load_module__', False)):
-			records.append(cast(dict[str, object], dictionary_value))
+			records.append(cast('dict[str, object]', dictionary_value))
 
 		for nested_value in dictionary_value.values():
 			records.extend(_collect_dehydrated_module_records(nested_value))
@@ -163,7 +165,7 @@ def _collect_dehydrated_module_records(config_value: object) -> list[dict[str, o
 		return records
 
 	if isinstance(config_value, (list, tuple)):
-		sequence_value = cast(list[object] | tuple[object, ...], config_value)
+		sequence_value = cast('list[object] | tuple[object, ...]', config_value)
 		records = []
 		for nested_value in sequence_value:
 			records.extend(_collect_dehydrated_module_records(nested_value))
@@ -177,7 +179,7 @@ def _collect_module_instances(config_value: object) -> list[Module]:
 		return [config_value]
 
 	if isinstance(config_value, dict):
-		dictionary_value = cast(dict[object, object], config_value)
+		dictionary_value = cast('dict[object, object]', config_value)
 		instances: list[Module] = []
 		for nested_value in dictionary_value.values():
 			instances.extend(_collect_module_instances(nested_value))
@@ -185,7 +187,7 @@ def _collect_module_instances(config_value: object) -> list[Module]:
 		return instances
 
 	if isinstance(config_value, (list, tuple)):
-		sequence_value = cast(list[object] | tuple[object, ...], config_value)
+		sequence_value = cast('list[object] | tuple[object, ...]', config_value)
 		instances = []
 		for nested_value in sequence_value:
 			instances.extend(_collect_module_instances(nested_value))
@@ -211,7 +213,9 @@ def test_dehydrate_config_marks_save_load_modules(config_case_key: str, expected
 	remaining_module_instances = _collect_module_instances(dehydrated_config)
 
 	if expected_min_dehydrated_count == 0:
-		assert len(dehydrated_records) == 0, f'dehydrate_config produced {len(dehydrated_records)} dehydrated records, expected 0 for {config_case_key=}.'
+		assert len(dehydrated_records) == 0, (
+			f'dehydrate_config produced {len(dehydrated_records)} dehydrated records, expected 0 for {config_case_key=}.'
+		)
 	else:
 		assert len(dehydrated_records) >= expected_min_dehydrated_count, (
 			f'dehydrate_config produced {len(dehydrated_records)} dehydrated records, expected at least {expected_min_dehydrated_count} for {config_case_key=}.'
@@ -220,7 +224,9 @@ def test_dehydrate_config_marks_save_load_modules(config_case_key: str, expected
 	assert len(remaining_module_instances) == 0, f'dehydrate_config left module instances in output: {remaining_module_instances!r}.'
 
 	for record_index, dehydrated_record in enumerate(dehydrated_records):
-		assert dehydrated_record.get('__save_load_module__', False) is True, f'dehydrate_config emitted record {record_index} without __save_load_module__ marker: {dehydrated_record!r}.'
+		assert dehydrated_record.get('__save_load_module__', False) is True, (
+			f'dehydrate_config emitted record {record_index} without __save_load_module__ marker: {dehydrated_record!r}.'
+		)
 		assert 'klass' in dehydrated_record, f'dehydrate_config emitted record {record_index} without klass: {dehydrated_record!r}.'
 		assert 'config' in dehydrated_record, f'dehydrate_config emitted record {record_index} without config: {dehydrated_record!r}.'
 
@@ -259,8 +265,12 @@ def test_rehydrate_config_instantiates_manual_dehydrated_modules(dim: int, hidde
 	args, kwargs = rehydrated_config
 	instantiated_model = args[0]
 
-	assert isinstance(instantiated_model, SaveLoadExtendedLinearModel), f'rehydrate_config returned {type(instantiated_model).__name__}, expected SaveLoadExtendedLinearModel.'
-	assert getattr(instantiated_model, 'dim', None) == dim, f'rehydrate_config produced model dim {getattr(instantiated_model, "dim", None)}, expected {dim}.'
+	assert isinstance(instantiated_model, SaveLoadExtendedLinearModel), (
+		f'rehydrate_config returned {type(instantiated_model).__name__}, expected SaveLoadExtendedLinearModel.'
+	)
+	assert getattr(instantiated_model, 'dim', None) == dim, (
+		f'rehydrate_config produced model dim {getattr(instantiated_model, "dim", None)}, expected {dim}.'
+	)
 	assert getattr(instantiated_model, 'hidden_dim', None) == hidden_dim, (
 		f'rehydrate_config produced model hidden_dim {getattr(instantiated_model, "hidden_dim", None)}, expected {hidden_dim}.'
 	)
@@ -275,7 +285,7 @@ def test_save_load_rejects_non_module_targets(invalid_target_class: type) -> Non
 
 @pytest.mark.parametrize(('checkpoint_name', 'overwrite_flag'), [pytest.param('save-load-checkpoint.pt', False, id='overwrite-disabled')])
 def test_save_load_save_respects_overwrite_flag(temporary_artifact_path_builder: Callable[[str], Path], checkpoint_name: str, overwrite_flag: bool) -> None:
-	linear_model = cast(SaveLoadModelProtocol, SaveLoadExtendedLinearModel(7, 11))
+	linear_model = cast('SaveLoadModelProtocol', SaveLoadExtendedLinearModel(7, 11))
 	checkpoint_path = temporary_artifact_path_builder(checkpoint_name)
 
 	linear_model.save(str(checkpoint_path))
@@ -283,24 +293,32 @@ def test_save_load_save_respects_overwrite_flag(temporary_artifact_path_builder:
 	with pytest.raises(FileExistsError) as error_info:
 		linear_model.save(str(checkpoint_path), overwrite=overwrite_flag)
 
-	assert 'overwrite' in str(error_info.value), f'save_load.save raised unexpected error message for overwrite guard: {error_info.value!r}.'
+	assert 'overwrite' in str(error_info.value), (
+		f'save_load.save raised unexpected error message for overwrite guard: {error_info.value!r}.'
+	)
 
 @pytest.mark.parametrize('missing_checkpoint_name', [pytest.param('missing-save-load-checkpoint.pt', id='missing-save-load-checkpoint')])
 def test_save_load_load_and_init_and_load_raise_for_missing_paths(temporary_artifact_path_builder: Callable[[str], Path], missing_checkpoint_name: str) -> None:
-	linear_model = cast(SaveLoadModelProtocol, SaveLoadExtendedLinearModel(7, 11))
-	linear_model_class = cast(SaveLoadLinearClassProtocol, SaveLoadExtendedLinearModel)
+	linear_model = cast('SaveLoadModelProtocol', SaveLoadExtendedLinearModel(7, 11))
+	linear_model_class = cast('SaveLoadLinearClassProtocol', SaveLoadExtendedLinearModel)
 	missing_checkpoint_path = temporary_artifact_path_builder(missing_checkpoint_name)
 
 	with pytest.raises(FileNotFoundError) as load_error_info:
 		linear_model.load(str(missing_checkpoint_path))
 
-	assert 'no file exists at that path' in str(load_error_info.value), f'save_load.load raised unexpected missing-path message: {load_error_info.value!r}.'
-	assert missing_checkpoint_path.name in str(load_error_info.value), f'save_load.load missing-path message omitted filename {missing_checkpoint_path.name!r}: {load_error_info.value!r}.'
+	assert 'no file exists at that path' in str(load_error_info.value), (
+		f'save_load.load raised unexpected missing-path message: {load_error_info.value!r}.'
+	)
+	assert missing_checkpoint_path.name in str(load_error_info.value), (
+		f'save_load.load missing-path message omitted filename {missing_checkpoint_path.name!r}: {load_error_info.value!r}.'
+	)
 
 	with pytest.raises(FileNotFoundError) as init_load_error_info:
 		linear_model_class.init_and_load(str(missing_checkpoint_path))
 
-	assert 'no file exists at that path' in str(init_load_error_info.value), f'save_load.init_and_load raised unexpected missing-path message: {init_load_error_info.value!r}.'
+	assert 'no file exists at that path' in str(init_load_error_info.value), (
+		f'save_load.init_and_load raised unexpected missing-path message: {init_load_error_info.value!r}.'
+	)
 	assert missing_checkpoint_path.name in str(init_load_error_info.value), (
 		f'save_load.init_and_load missing-path message omitted filename {missing_checkpoint_path.name!r}: {init_load_error_info.value!r}.'
 	)
@@ -308,39 +326,49 @@ def test_save_load_load_and_init_and_load_raise_for_missing_paths(temporary_arti
 @pytest.mark.parametrize('checkpoint_name', [pytest.param('checkpoint-without-config.pt', id='checkpoint-without-config')])
 def test_save_load_init_and_load_requires_config_key(torch_artifact_writer: Callable[[str, object], Path], checkpoint_name: str) -> None:
 	linear_model = SaveLoadExtendedLinearModel(7, 11)
-	linear_model_class = cast(SaveLoadLinearClassProtocol, SaveLoadExtendedLinearModel)
+	linear_model_class = cast('SaveLoadLinearClassProtocol', SaveLoadExtendedLinearModel)
 	checkpoint_path_without_config = torch_artifact_writer(checkpoint_name, {'model': linear_model.state_dict(), 'version': None})
 
 	with pytest.raises(KeyError) as error_info:
 		linear_model_class.init_and_load(str(checkpoint_path_without_config))
 
-	assert 'model configs were not found' in str(error_info.value), f'save_load.init_and_load raised unexpected config-missing message: {error_info.value!r}.'
+	assert 'model configs were not found' in str(error_info.value), (
+		f'save_load.init_and_load raised unexpected config-missing message: {error_info.value!r}.'
+	)
 
 @pytest.mark.parametrize('checkpoint_name', [pytest.param('save-load-custom-methods.pt', id='save-load-custom-methods')])
 def test_save_load_supports_custom_method_names_and_config_storage(temporary_artifact_path_builder: Callable[[str], Path], checkpoint_name: str) -> None:
-	custom_model = cast(SaveLoadCustomModelProtocol, SaveLoadExtendedCustomNamedModel(13))
-	custom_model_class = cast(SaveLoadCustomClassProtocol, SaveLoadExtendedCustomNamedModel)
+	custom_model = cast('SaveLoadCustomModelProtocol', SaveLoadExtendedCustomNamedModel(13))
+	custom_model_class = cast('SaveLoadCustomClassProtocol', SaveLoadExtendedCustomNamedModel)
 	checkpoint_path = temporary_artifact_path_builder(checkpoint_name)
 
 	assert hasattr(custom_model, 'store'), "custom save_load model is missing configured save method 'store'."
 	assert hasattr(custom_model, 'restore'), "custom save_load model is missing configured load method 'restore'."
-	assert hasattr(custom_model_class, 'create_and_restore'), "custom save_load class is missing configured classmethod 'create_and_restore'."
+	assert hasattr(custom_model_class, 'create_and_restore'), (
+		"custom save_load class is missing configured classmethod 'create_and_restore'."
+	)
 	assert hasattr(custom_model, 'stored_config'), "custom save_load model is missing configured config storage attribute 'stored_config'."
 
 	custom_model.store(str(checkpoint_path))
 
 	loaded_by_classmethod = custom_model_class.create_and_restore(str(checkpoint_path))
-	assert loaded_by_classmethod.width == custom_model.width, f'custom save_load classmethod returned width {loaded_by_classmethod.width}, expected {custom_model.width}.'
-	assert torch.allclose(loaded_by_classmethod.weight, custom_model.weight), 'custom save_load classmethod failed to restore parameter values from checkpoint.'
+	assert loaded_by_classmethod.width == custom_model.width, (
+		f'custom save_load classmethod returned width {loaded_by_classmethod.width}, expected {custom_model.width}.'
+	)
+	assert torch.allclose(loaded_by_classmethod.weight, custom_model.weight), (
+		'custom save_load classmethod failed to restore parameter values from checkpoint.'
+	)
 
 	loaded_by_instance_method = custom_model_class(custom_model.width)
 	loaded_by_instance_method.restore(str(checkpoint_path))
-	assert torch.allclose(loaded_by_instance_method.weight, custom_model.weight), 'custom save_load instance restore failed to load parameter values from checkpoint.'
+	assert torch.allclose(loaded_by_instance_method.weight, custom_model.weight), (
+		'custom save_load instance restore failed to load parameter values from checkpoint.'
+	)
 
 @pytest.mark.parametrize('checkpoint_name', [pytest.param('save-load-versioned.pt', id='save-load-versioned')])
 def test_save_load_version_mismatch_emits_notice_and_loads_state(temporary_artifact_path_builder: Callable[[str], Path], checkpoint_name: str) -> None:
-	writer_model = cast(SaveLoadVersionedModelProtocol, SaveLoadExtendedVersionedWriter(dim=5))
-	reader_model = cast(SaveLoadVersionedModelProtocol, SaveLoadExtendedVersionedReader(dim=5))
+	writer_model = cast('SaveLoadVersionedModelProtocol', SaveLoadExtendedVersionedWriter(dim=5))
+	reader_model = cast('SaveLoadVersionedModelProtocol', SaveLoadExtendedVersionedReader(dim=5))
 	checkpoint_path = temporary_artifact_path_builder(checkpoint_name)
 
 	writer_model.save(str(checkpoint_path))
@@ -359,12 +387,14 @@ def test_save_load_version_mismatch_emits_notice_and_loads_state(temporary_artif
 	assert '9.7.1' in version_mismatch_message, (
 		f'save_load version mismatch warning omitted current version. Captured message: {version_mismatch_message!r}.'
 	)
-	assert torch.allclose(writer_model.net.weight, reader_model.net.weight), 'save_load failed to load state_dict values after version mismatch notice.'
+	assert torch.allclose(writer_model.net.weight, reader_model.net.weight), (
+		'save_load failed to load state_dict values after version mismatch notice.'
+	)
 
 @pytest.mark.parametrize('checkpoint_name', [pytest.param('save-load-strict.pt', id='save-load-strict')])
 def test_save_load_strict_flag_controls_missing_key_behavior(temporary_artifact_path_builder: Callable[[str], Path], checkpoint_name: str) -> None:
-	writer_model = cast(SaveLoadVersionedModelProtocol, SaveLoadExtendedStrictWriter(dim=5))
-	reader_model = cast(SaveLoadVersionedModelProtocol, SaveLoadExtendedStrictReader(dim=5))
+	writer_model = cast('SaveLoadVersionedModelProtocol', SaveLoadExtendedStrictWriter(dim=5))
+	reader_model = cast('SaveLoadVersionedModelProtocol', SaveLoadExtendedStrictReader(dim=5))
 	checkpoint_path = temporary_artifact_path_builder(checkpoint_name)
 
 	writer_model.save(str(checkpoint_path))
@@ -372,55 +402,63 @@ def test_save_load_strict_flag_controls_missing_key_behavior(temporary_artifact_
 	with pytest.raises(RuntimeError) as strict_error_info:
 		reader_model.load(str(checkpoint_path), strict=True)
 
-	assert 'Missing key(s) in state_dict' in str(strict_error_info.value), f'save_load strict=True raised unexpected error message: {strict_error_info.value!r}.'
+	assert 'Missing key(s) in state_dict' in str(strict_error_info.value), (
+		f'save_load strict=True raised unexpected error message: {strict_error_info.value!r}.'
+	)
 
 	reader_model.load(str(checkpoint_path), strict=False)
-	assert torch.allclose(writer_model.net.weight, reader_model.net.weight), 'save_load strict=False failed to load shared keys from state_dict.'
+	assert torch.allclose(writer_model.net.weight, reader_model.net.weight), (
+		'save_load strict=False failed to load shared keys from state_dict.'
+	)
 
 @pytest.mark.parametrize('checkpoint_name', [pytest.param('save-load-nested.pt', id='save-load-nested')])
 def test_save_load_init_and_load_rehydrates_nested_modules(temporary_artifact_path_builder: Callable[[str], Path], checkpoint_name: str) -> None:
-	nested_model = cast(SaveLoadNestedRootProtocol, _build_save_load_extended_nested_model())
-	nested_model_class = cast(SaveLoadNestedClassProtocol, SaveLoadExtendedRoot)
+	nested_model = cast('SaveLoadNestedRootProtocol', _build_save_load_extended_nested_model())
+	nested_model_class = cast('SaveLoadNestedClassProtocol', SaveLoadExtendedRoot)
 	checkpoint_path = temporary_artifact_path_builder(checkpoint_name)
 
 	nested_model.save(str(checkpoint_path))
 	restored_model = nested_model_class.init_and_load(str(checkpoint_path))
 
-	assert restored_model.primary.label == nested_model.primary.label, f'nested save_load changed primary label from {nested_model.primary.label!r} to {restored_model.primary.label!r}.'
+	assert restored_model.primary.label == nested_model.primary.label, (
+		f'nested save_load changed primary label from {nested_model.primary.label!r} to {restored_model.primary.label!r}.'
+	)
 	assert restored_model.secondary is not None, 'nested save_load restored model with missing secondary branch.'
 	assert nested_model.secondary is not None, 'nested save_load test fixture unexpectedly created source model without secondary branch.'
 	assert restored_model.primary.leaf is not None, 'nested save_load restored model with missing primary leaf module.'
 	assert restored_model.secondary.leaf is not None, 'nested save_load restored model with missing secondary leaf module.'
-	assert nested_model.primary.leaf is not None, 'nested save_load test fixture unexpectedly created source model without primary leaf module.'
-	assert nested_model.secondary.leaf is not None, 'nested save_load test fixture unexpectedly created source model without secondary leaf module.'
+	assert nested_model.primary.leaf is not None, (
+		'nested save_load test fixture unexpectedly created source model without primary leaf module.'
+	)
+	assert nested_model.secondary.leaf is not None, (
+		'nested save_load test fixture unexpectedly created source model without secondary leaf module.'
+	)
 	assert restored_model.primary.leaf.marker == nested_model.primary.leaf.marker, (
 		f'nested save_load changed primary leaf marker from {nested_model.primary.leaf.marker!r} to {restored_model.primary.leaf.marker!r}.'
 	)
 	assert restored_model.secondary.leaf.marker == nested_model.secondary.leaf.marker, (
 		f'nested save_load changed secondary leaf marker from {nested_model.secondary.leaf.marker!r} to {restored_model.secondary.leaf.marker!r}.'
 	)
-	assert torch.allclose(restored_model.output.weight, nested_model.output.weight), 'nested save_load failed to restore root module state_dict values.'
-	assert torch.allclose(restored_model.primary.gate, nested_model.primary.gate), 'nested save_load failed to restore primary branch parameter values.'
-	assert torch.allclose(restored_model.secondary.gate, nested_model.secondary.gate), 'nested save_load failed to restore secondary branch parameter values.'
+	assert torch.allclose(restored_model.output.weight, nested_model.output.weight), (
+		'nested save_load failed to restore root module state_dict values.'
+	)
+	assert torch.allclose(restored_model.primary.gate, nested_model.primary.gate), (
+		'nested save_load failed to restore primary branch parameter values.'
+	)
+	assert torch.allclose(restored_model.secondary.gate, nested_model.secondary.gate), (
+		'nested save_load failed to restore secondary branch parameter values.'
+	)
 
 @pytest.mark.parametrize(
-	("input_value", "expected"),
+	('input_value', 'expected'),
 	[
-		pytest.param(13, 26, id="leaf-int"),
-		pytest.param([2, 3, 5], [4, 6, 10], id="flat-list"),
-		pytest.param((7, 11, 13), (14, 22, 26), id="flat-tuple"),
-		pytest.param({"north": 3, "east": 5}, {"north": 6, "east": 10}, id="flat-dict"),
-		pytest.param(
-			{"alpha": [2, 3], "beta": (5, 7)},
-			{"alpha": [4, 6], "beta": (10, 14)},
-			id="nested-dict-with-sequences",
-		),
-		pytest.param([[2, 3], [5, 7]], [[4, 6], [10, 14]], id="nested-lists"),
-		pytest.param(
-			{"outer": {"inner": 11, "sibling": 13}},
-			{"outer": {"inner": 22, "sibling": 26}},
-			id="nested-dicts",
-		),
+		pytest.param(13, 26, id='leaf-int'),
+		pytest.param([2, 3, 5], [4, 6, 10], id='flat-list'),
+		pytest.param((7, 11, 13), (14, 22, 26), id='flat-tuple'),
+		pytest.param({'north': 3, 'east': 5}, {'north': 6, 'east': 10}, id='flat-dict'),
+		pytest.param({'alpha': [2, 3], 'beta': (5, 7)}, {'alpha': [4, 6], 'beta': (10, 14)}, id='nested-dict-with-sequences'),
+		pytest.param([[2, 3], [5, 7]], [[4, 6], [10, 14]], id='nested-lists'),
+		pytest.param({'outer': {'inner': 11, 'sibling': 13}}, {'outer': {'inner': 22, 'sibling': 26}}, id='nested-dicts'),
 	],
 )
 def test_map_values_transforms_structure(input_value: object, expected: object) -> None:
@@ -430,6 +468,4 @@ def test_map_values_transforms_structure(input_value: object, expected: object) 
 		return value
 
 	result = map_values(double_if_int, input_value)  # type: ignore[arg-type]
-	assert result == expected, (
-		f"map_values returned {result!r}, expected {expected!r} for {input_value=}."
-	)
+	assert result == expected, f'map_values returned {result!r}, expected {expected!r} for {input_value=}.'

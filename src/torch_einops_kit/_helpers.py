@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Sequence
 from functools import wraps
-from torch import Tensor
-from torch_einops_kit import IdentityCallable, PSpec, RVar, SupportsIntIndex, T_co, TVar
-from typing import Concatenate, overload, TypeGuard
+from typing import Concatenate, overload, TYPE_CHECKING, TypeGuard
+
+if TYPE_CHECKING:
+	from collections.abc import Callable, Iterable, Sequence
+	from torch import Tensor
+	from torch_einops_kit import IdentityCallable, PSpec, RVar, SupportsIntIndex, T_co, TVar
 
 def compact(arr: Iterable[T_co | None]) -> list[T_co]:
 	"""Filter `None` values from `arr` and return the remaining elements as a `list`.
@@ -118,10 +120,10 @@ def exists(v: TVar | None) -> TypeGuard[TVar]:
 	--------
 	From `torch_einops_kit.lens_to_mask` [2], guarding optional parameter `max_len` before use:
 
-		```python
+	```python
 		if not exists(max_len):
 			max_len = lens.amax().item()
-		```
+	```
 
 	References
 	----------
@@ -222,10 +224,10 @@ def map_values(fn: Callable[[TVar], TVar], v: TVar) -> TVar:
 	[3] tests.test_helpers.test_map_values_transforms_structure
 	"""
 	if isinstance(v, (list, tuple)):
-		return type(v)(map_values(fn, el) for el in v) # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
+		return type(v)(map_values(fn, el) for el in v)  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
 
 	if isinstance(v, dict):
-		v = {key: map_values(fn, val) for key, val in v.items()} # pyright: ignore[reportAssignmentType, reportUnknownArgumentType, reportUnknownVariableType]  # ty:ignore[invalid-assignment]
+		v = {key: map_values(fn, val) for key, val in v.items()}  # pyright: ignore[reportAssignmentType, reportUnknownArgumentType, reportUnknownVariableType]  # ty:ignore[invalid-assignment]
 
 	return fn(v)
 
@@ -233,9 +235,7 @@ def map_values(fn: Callable[[TVar], TVar], v: TVar) -> TVar:
 def maybe(fn: Callable[Concatenate[TVar, PSpec], RVar]) -> Callable[Concatenate[TVar | None, PSpec], RVar | None]: ...
 @overload
 def maybe(fn: None) -> IdentityCallable: ...
-def maybe(
-	fn: Callable[Concatenate[TVar, PSpec], RVar] | None,
-) -> Callable[Concatenate[TVar | None, PSpec], RVar | None] | IdentityCallable:
+def maybe(fn: Callable[Concatenate[TVar, PSpec], RVar] | None) -> Callable[Concatenate[TVar | None, PSpec], RVar | None] | IdentityCallable:
 	"""Wrap `fn` so that the wrapped function returns `None` when the first argument is `None`.
 
 	You can use this function to conditionally apply `fn` without adding an explicit `if`/`else`
@@ -264,29 +264,29 @@ def maybe(
 	--------
 	Skip the function when the first argument is `None` [2]:
 
-		```python
+	```python
 		from torch_einops_kit import maybe
 
 		result = maybe(lambda t: t + 1)(None)
 		# result is None
-		```
+	```
 
 	Pass `None` as `fn` to receive an identity function [2]:
 
-		```python
+	```python
 		result = maybe(None)(1)
 		# result == 1
-		```
+	```
 
 	Conditionally convert episode lengths to a mask [3]:
 
-		```python
+	```python
 		from torch_einops_kit import maybe, lens_to_mask
 
 		mask = maybe(lens_to_mask)(episode_lens, seq_len)
 		# mask is None when episode_lens is None,
 		# otherwise mask == lens_to_mask(episode_lens, seq_len)
-		```
+	```
 
 	References
 	----------
@@ -301,13 +301,13 @@ def maybe(
 		return identity
 
 	@wraps(fn)
-	def inner(t: TVar | None, *args: PSpec.args, **kwargs: PSpec.kwargs) -> RVar | None:
+	def workhorse(t: TVar | None, *args: PSpec.args, **kwargs: PSpec.kwargs) -> RVar | None:
 		if not exists(t):
 			return None
 
 		return fn(t, *args, **kwargs)
 
-	return inner
+	return workhorse
 
 def once(fn: Callable[PSpec, RVar]) -> Callable[PSpec, RVar | None]:
 	"""Wrap a callable so the callable executes at most once.
@@ -330,12 +330,12 @@ def once(fn: Callable[PSpec, RVar]) -> Callable[PSpec, RVar | None]:
 	--------
 	This example creates a variant of the built-in `print` that emits output only once:
 
-		```python
+	```python
 		print_once = once(print)
 
 		if device_properties.major == 8 and device_properties.minor == 0:
 			print_once('A100 GPU detected, using flash attention if input tensor is on cuda')
-		```
+	```
 
 	References
 	----------
@@ -346,7 +346,7 @@ def once(fn: Callable[PSpec, RVar]) -> Callable[PSpec, RVar | None]:
 	called: bool = False
 
 	@wraps(fn)
-	def inner(*args: PSpec.args, **kwargs: PSpec.kwargs) -> RVar | None:
+	def workhorse(*args: PSpec.args, **kwargs: PSpec.kwargs) -> RVar | None:
 		nonlocal called
 
 		if called:
@@ -355,34 +355,42 @@ def once(fn: Callable[PSpec, RVar]) -> Callable[PSpec, RVar | None]:
 		called = True
 		return fn(*args, **kwargs)
 
-	return inner
+	return workhorse
 
+@overload
+def safe(fn: Callable[Concatenate[Sequence[Tensor], PSpec], RVar]) -> Callable[Concatenate[Sequence[Tensor | None], PSpec], RVar]: ...
+@overload
+def safe(fn: Callable[Concatenate[tuple[Tensor, ...] | list[Tensor], PSpec], RVar]) -> Callable[Concatenate[tuple[Tensor | None, ...] | list[Tensor | None], PSpec], RVar]: ...
 def safe(
-	fn: Callable[Concatenate[Sequence[Tensor], PSpec], Tensor | None],
-) -> Callable[Concatenate[Sequence[Tensor | None], PSpec], Tensor | None]:
+	fn: Callable[Concatenate[Sequence[Tensor], PSpec], RVar] | Callable[Concatenate[tuple[Tensor, ...] | list[Tensor], PSpec], RVar],
+) -> (
+	Callable[Concatenate[Sequence[Tensor | None], PSpec], RVar]
+	| Callable[Concatenate[tuple[Tensor | None, ...] | list[Tensor | None], PSpec], RVar]
+):
 	"""Wrap `fn` so that `None` values are filtered from the first argument before the call.
 
 	You can use `safe` as a decorator to make a function that accepts a `Sequence[Tensor]` tolerate
 	`None` values in the sequence. The decorated function accepts a `Sequence[Tensor | None]`. Before
-	calling `fn`, `safe` compacts [1] the sequence to remove all `None` values. When the compacted
-	sequence is empty, `safe` returns `None` without calling `fn`. When at least one non-`None`
-	`Tensor` remains, `safe` passes the compacted sequence to `fn`.
+	calling `fn`, `safe` applies `compact` [1] to the first argument to remove all `None` values, then
+	passes the compacted `list[Tensor]` to `fn`. `safe` always calls `fn`; the behavior when the
+	compacted sequence is empty is determined by `fn` itself.
 
 	`safe` is applied as a decorator to `safe_stack` [2] and `safe_cat` [3] to produce null-safe
-	stacking and concatenation. `safe` is also applied to `reduce_masks` [4] to produce null-safe
-	mask reduction.
+	stacking and concatenation. `safe` is also applied to `reduce_masks` [4] to produce null-safe mask
+	reduction.
 
 	Parameters
 	----------
-	fn : Callable[Concatenate[Sequence[Tensor], PSpec], Tensor | None]
-		A callable whose first argument is a `Sequence[Tensor]` with at least one element. `fn` must
-		handle a compacted sequence of any length ≥ 1.
+	fn : Callable[Concatenate[Sequence[Tensor], PSpec], RVar]
+		A callable whose first argument is a `Sequence[Tensor]`. `fn` receives a compacted
+		`list[Tensor]` with all `None` values removed. `fn` must handle an empty list if the input may
+		contain only `None` values.
 
 	Returns
 	-------
-	wrapped : Callable[Concatenate[Sequence[Tensor | None], PSpec], Tensor | None]
-		A wrapped version of `fn` that accepts `None` values in the first argument and returns `None`
-		when no non-`None` `Tensor` values are present.
+	wrapped : Callable[Concatenate[Sequence[Tensor | None], PSpec], RVar]
+		A wrapped version of `fn` that accepts `None` values in the first argument, filtering them out
+		before forwarding to `fn`.
 
 	See Also
 	--------
@@ -402,16 +410,13 @@ def safe(
 	"""
 
 	@wraps(fn)
-	def inner(tensors: Sequence[Tensor | None], *args: PSpec.args, **kwargs: PSpec.kwargs) -> Tensor | None:
-		safe_tensors: list[Tensor] = compact(tensors)
-		if len(safe_tensors) == 0:
-			return None
-		return fn(safe_tensors, *args, **kwargs)
+	def workhorse(tensors: Sequence[Tensor | None], *args: PSpec.args, **kwargs: PSpec.kwargs) -> RVar:
+		return fn(compact(tensors), *args, **kwargs)
 
-	return inner
+	return workhorse
 
 """
-Some or all of the logic in this module may be protected by the following.
+Some of the logic in this module may be protected by the following.
 
 MIT License
 

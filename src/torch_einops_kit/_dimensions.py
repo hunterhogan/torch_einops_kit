@@ -1,6 +1,11 @@
-from collections.abc import Sequence
-from torch import Tensor
+from __future__ import annotations
+
 from torch_einops_kit import exists
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+	from collections.abc import Sequence
+	from torch import Tensor
 
 def pad_right_ndim(t: Tensor, ndims: int) -> Tensor:
 	"""Reshape a tensor by inserting singleton dimensions at the trailing side.
@@ -45,11 +50,7 @@ def pad_right_ndim(t: Tensor, ndims: int) -> Tensor:
 	"""
 	return pad_ndim(t, (0, ndims))
 
-def align_dims_left(
-	tensors: Sequence[Tensor],
-	*,
-	ndim: int | None = None,
-) -> tuple[Tensor, ...]:
+def align_dims_left(tensors: Sequence[Tensor], *, ndim: int | None = None) -> tuple[Tensor, ...]:
 	"""Pad all tensors in a sequence with trailing singleton dimensions to a common rank.
 
 	You can use this function to align a heterogeneous sequence of tensors to the same number of
@@ -87,33 +88,33 @@ def align_dims_left(
 	Align a PPO advantage tensor `(b, n)` with a log-probability ratio tensor `(b, n, d)` for
 	element-wise multiplication:
 
-		```python
+	```python
 		from torch_einops_kit import align_dims_left
 
 		# metacontroller: align ratio and advantages before the PPO surrogate loss
 		ratio, advantages = align_dims_left((ratio, advantages))
 		surr1 = ratio * advantages
-		```
+	```
 
 	Align a noise schedule `(b,)` with a latent tensor `(b, n, d)` for linear interpolation:
 
-		```python
+	```python
 		from torch_einops_kit import align_dims_left
 
 		# dreamer4: align time with latents before noising
 		aligned_times, _ = align_dims_left((times, latents))
 		noised_latents = noise.lerp(latents, aligned_times)
-		```
+	```
 
 	Align a 1-D time value with an action tensor before flow-matching noise interpolation:
 
-		```python
+	```python
 		from torch_einops_kit import align_dims_left
 
 		# mimic_video: align time with actions for noise interpolation
 		actions, left_aligned_time = align_dims_left((actions, time))
 		noised = noise.lerp(actions, left_aligned_time)
-		```
+	```
 
 	References
 	----------
@@ -179,7 +180,7 @@ def pad_ndim(t: Tensor, ndims: tuple[int, int]) -> Tensor:
 	shape: tuple[int, ...] = t.shape
 	left, right = ndims
 	if left < 0 or right < 0:
-		message: str = f"I received `{left = }` and `{right = }`, but I need both values to be greater than or equal to `0`."
+		message: str = f'I received `{left = }` and `{right = }`, but I need both values to be greater than or equal to `0`.'
 		raise ValueError(message)
 
 	ones: tuple[int] = (1,)
@@ -311,22 +312,22 @@ def pad_right_ndim_to(t: Tensor, ndims: int) -> Tensor:
 	Broadcast a scalar time value against a video tensor of shape `(b, c, t, h, w)`
 	for flow interpolation:
 
-		```python
+	```python
 		from torch_einops_kit import pad_right_ndim_to
 
 		# dreamer4: align time '(b,)' with video '(b, c, t, h, w)'
 		padded_time = pad_right_ndim_to(time[None], video.ndim)
 		pred_flow = (pred_video - video) / (1.0 - padded_time)
-		```
+	```
 
 	Scale a flow prediction using a denominator with lower rank than the prediction:
 
-		```python
+	```python
 		from torch_einops_kit import pad_right_ndim_to
 
 		# mimic_video: convert model output to flow space
 		pred_flow = (pred - actions) / pad_right_ndim_to(1.0 - action_time, pred.ndim).clamp_min(eps)
-		```
+	```
 
 	References
 	----------

@@ -20,14 +20,16 @@ Functions
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from functools import wraps
 from itertools import chain
-from torch import device, Tensor
-from torch.nn import Module
-from torch.types import Device
 from torch_einops_kit import exists, PSpec, TorchNNModule, tree_map_tensor, TVar
-from typing import Concatenate
+from typing import Concatenate, TYPE_CHECKING
+
+if TYPE_CHECKING:
+	from collections.abc import Callable
+	from torch import device, Tensor
+	from torch.nn import Module
+	from torch.types import Device
 
 def module_device(m: Module) -> device | None:
 	"""Infer the `torch.device` of a `torch.nn.Module` instance from its first `torch.nn.Parameter` or registered `torch.Tensor` buffer.
@@ -71,7 +73,7 @@ def module_device(m: Module) -> device | None:
 	--------
 	Retrieve the `torch.device` of a `torch.nn.Module` instance with `torch.nn.Parameter` values [6]:
 
-		```python
+	```python
 		import torch
 		from torch import nn
 		from torch_einops_kit.device import module_device
@@ -79,16 +81,16 @@ def module_device(m: Module) -> device | None:
 		linear = nn.Linear(3, 5)
 		inferredDevice = module_device(linear)
 		# inferredDevice == torch.device('cpu')
-		```
+	```
 
 	Returns `None` for a `torch.nn.Module` instance that has no `torch.nn.Parameter` values and no
 	registered `torch.Tensor` buffer values:
 
-		```python
+	```python
 		empty = nn.Identity()
 		inferredDevice = module_device(empty)
 		# inferredDevice is None
-		```
+	```
 
 	References
 	----------
@@ -151,27 +153,24 @@ def move_inputs_to_device(device: Device) -> Callable[[Callable[PSpec, TVar]], C
 	--------
 	Wrap a callable so all `Tensor` arguments are moved to the `meta` compute device [5]:
 
-		```python
+	```python
 		import torch
 		from torch_einops_kit.device import move_inputs_to_device
 
-		targetDevice = torch.device("meta")
+		targetDevice = torch.device('meta')
 
 		@move_inputs_to_device(targetDevice)
 		def collectDeviceTypes(
-			positionTensor: torch.Tensor,
-			nestedTuple: tuple[torch.Tensor, str],
-			*,
-			keywordTensor: torch.Tensor,
+			positionTensor: torch.Tensor, nestedTuple: tuple[torch.Tensor, str], *, keywordTensor: torch.Tensor
 		) -> tuple[torch.device, torch.device, torch.device]:
 			return positionTensor.device, nestedTuple[0].device, keywordTensor.device
 
 		cpuTensor = torch.tensor([1.0, 2.0])
-		result = collectDeviceTypes(cpuTensor, (cpuTensor, "north"), keywordTensor=cpuTensor)
+		result = collectDeviceTypes(cpuTensor, (cpuTensor, 'north'), keywordTensor=cpuTensor)
 		# result[0] == torch.device("meta")
 		# result[1] == torch.device("meta")
 		# result[2] == torch.device("meta")
-		```
+	```
 
 	References
 	----------
@@ -189,12 +188,12 @@ def move_inputs_to_device(device: Device) -> Callable[[Callable[PSpec, TVar]], C
 
 	def decorator(fn: Callable[PSpec, TVar]) -> Callable[PSpec, TVar]:
 		@wraps(fn)
-		def inner(*args: PSpec.args, **kwargs: PSpec.kwargs) -> TVar:
+		def workhorse(*args: PSpec.args, **kwargs: PSpec.kwargs) -> TVar:
 			args, kwargs = tree_map_tensor(lambda t: t.to(device), (args, kwargs))
 
 			return fn(*args, **kwargs)
 
-		return inner
+		return workhorse
 
 	return decorator
 
@@ -244,7 +243,7 @@ def move_inputs_to_module_device(fn: Callable[Concatenate[TorchNNModule, PSpec],
 	Decorate a method so all `Tensor` arguments are moved to the `torch.device` of the
 	`torch.nn.Module` instance [5]:
 
-		```python
+	```python
 		import torch
 		from torch import nn, Tensor
 		from torch_einops_kit.device import move_inputs_to_module_device
@@ -252,7 +251,7 @@ def move_inputs_to_module_device(fn: Callable[Concatenate[TorchNNModule, PSpec],
 		class EchoModule(nn.Module):
 			def __init__(self) -> None:
 				super().__init__()
-				self.scale = nn.Parameter(torch.tensor([2.0], device=torch.device("meta")))
+				self.scale = nn.Parameter(torch.tensor([2.0], device=torch.device('meta')))
 
 			@move_inputs_to_module_device
 			def forward(self, tensorValue: Tensor) -> Tensor:
@@ -262,16 +261,16 @@ def move_inputs_to_module_device(fn: Callable[Concatenate[TorchNNModule, PSpec],
 		cpuTensor = torch.tensor([1.0, 2.0])
 		result = module.forward(cpuTensor)
 		# result.device == torch.device("meta")
-		```
+	```
 
 	Decorate a standalone callable and attach it to a `torch.nn.Module` subclass as a method [6]:
 
-		```python
+	```python
 		@move_inputs_to_module_device
 		def policy_loss(model, state, old_log_probs, actions, advantages, mask=None): ...
 
 		MetaController.policy_loss = policy_loss
-		```
+	```
 
 	References
 	----------
@@ -290,7 +289,7 @@ def move_inputs_to_module_device(fn: Callable[Concatenate[TorchNNModule, PSpec],
 	"""
 
 	@wraps(fn)
-	def inner(self: TorchNNModule, *args: PSpec.args, **kwargs: PSpec.kwargs) -> TVar:
+	def workhorse(self: TorchNNModule, *args: PSpec.args, **kwargs: PSpec.kwargs) -> TVar:
 		theDevice: device | None = module_device(self)
 
 		if exists(theDevice):
@@ -298,7 +297,7 @@ def move_inputs_to_module_device(fn: Callable[Concatenate[TorchNNModule, PSpec],
 
 		return fn(self, *args, **kwargs)  # ty:ignore[invalid-argument-type]
 
-	return inner
+	return workhorse
 
 """
 Some or all of the logic in this module may be protected by the following.

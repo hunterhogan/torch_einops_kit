@@ -1,6 +1,6 @@
 # torch_einops_kit
 
-Typed tensor-shaping, masking, padding, device-routing, and checkpoint utilities for PyTorch and `einops`.
+Typed tensor-shaping, masking, padding, device-routing, lightweight `nn.Module` adapters, and checkpoint utilities for PyTorch and `einops`.
 
 [![pip install torch-einops-kit](https://img.shields.io/badge/pip_install-torch--einops--kit-gray.svg?labelColor=blue)](https://pypi.org/project/torch-einops-kit/)
 [![uv add torch-einops-kit](https://img.shields.io/badge/uv_add-torch--einops--kit-gray.svg?labelColor=blue)](https://pypi.org/project/torch-einops-kit/)
@@ -9,7 +9,7 @@ This repository is a superset of [`lucidrains/torch-einops-utils`](https://githu
 
 `torch_einops_kit` is most useful when combined with other lucidrains repositories. Repositories such as [`dreamer4`](https://github.com/lucidrains/dreamer4), [`metacontroller`](https://github.com/lucidrains/metacontroller), [`mimic-video`](https://github.com/lucidrains/mimic-video), [`pi-zero-pytorch`](https://github.com/lucidrains/pi-zero-pytorch), [`sdft-pytorch`](https://github.com/lucidrains/sdft-pytorch), and [`locoformer`](https://github.com/lucidrains/locoformer) repeatedly need operations such as `align_dims_left`, `shape_with_replace`, `lens_to_mask`, `pad_sequence`, `safe_cat`, and `pack_with_inverse`. This package centralizes those operations in one typed import surface instead of re-implementing the same tensor utility layer in each model repository.
 
-If you already know `torch-einops-utils`, `torch_einops_kit` began as a typed substitute for that package and has since grown into a superset. In addition to everything from `torch-einops-utils`, this repository centralizes small utility functions that appear repeatedly in other lucidrains model repositories but were never collected in one place, such as `l2norm`, `once`, `pack_one`, and `unpack_one`. The function family remains the same kind: small PyTorch and `einops` helpers for shape work, masks, padding, optional tensors, PyTree traversal, device routing, and checkpoint reconstruction. The import path is `torch_einops_kit`, not `torch_einops_utils`. The relationship is conceptual, not literal import-path compatibility.
+If you already know `torch-einops-utils`, `torch_einops_kit` began as a typed substitute for that package and has since grown into a superset. In addition to everything from `torch-einops-utils`, this repository centralizes small utility functions that appear repeatedly in other lucidrains model repositories but were never collected in one place, such as `l2norm`, `once`, `pack_one`, and `unpack_one`. The function family remains the same kind: small PyTorch and `einops` helpers for shape work, masks, padding, optional tensors, PyTree traversal, device routing, lightweight `nn.Module` adaptation, and checkpoint reconstruction. The import path is `torch_einops_kit`, not `torch_einops_utils`. The relationship is conceptual, not literal import-path compatibility.
 
 Use `torch_einops_kit` when you want strict typing, a `py.typed` marker, focused modules, extensive tests, and docstrings written for both humans and AI assistants. Use upstream when you want the most compact possible version of the same idea.
 
@@ -20,7 +20,7 @@ Use `torch_einops_kit` when you want strict typing, a `py.typed` marker, focused
 - Python requirement: `>=3.10`.
 - Runtime dependencies: `torch`, `einops`, and `typing-extensions`.
 - Root package exports: helper functions, slicing helpers, rank-alignment helpers, mask helpers, safe concatenation helpers, padding helpers, normalization helpers, and PyTree / `einops` helpers.
-- Submodules with dedicated imports: `torch_einops_kit.device`, `torch_einops_kit.einops`, `torch_einops_kit.save_load`, and `torch_einops_kit.scaleValues`.
+- Submodules with dedicated imports: `torch_einops_kit.device`, `torch_einops_kit.einops`, `torch_einops_kit.nn`, `torch_einops_kit.save_load`, and `torch_einops_kit.scaleValues`.
 - Typing status: the package ships a `py.typed` marker and the repository uses strict type checking.
 - Best fit: lucidrains-style model repositories that work with variable-length tensors, `einops` patterns, optional intermediate tensors, and nested `torch.nn.Module` graphs.
 
@@ -82,6 +82,16 @@ from torch_einops_kit.device import (
 )
 ```
 
+Import lightweight `nn.Module` adapters from `torch_einops_kit.nn`:
+
+```python
+from torch_einops_kit.nn import (
+    Identity,
+    Lambda,
+    Sequential,
+)
+```
+
 Import checkpoint decorators from `torch_einops_kit.save_load`:
 
 ```python
@@ -92,7 +102,7 @@ from torch_einops_kit.save_load import (
 )
 ```
 
-Import checkpoint decorators from `torch_einops_kit.scaleValues`:
+Import normalization and masked-reduction helpers from `torch_einops_kit.scaleValues`:
 
 ```python
 from torch_einops_kit.scaleValues import (
@@ -262,10 +272,10 @@ When `pad_lens=True` and `return_lens=True`, the second tensor contains padding 
 
 ### PyTree helpers
 
-| Name                              | Contract                                                                                                                                                               |
-| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tree_map_tensor(fn, tree)`       | Applies `fn` to every tensor leaf in a PyTree and leaves non-tensor leaves unchanged.                                                                                  |
-| `tree_flatten_with_inverse(tree)` | Returns a flat list of leaves and an inverse function that reconstructs the original PyTree shape from a replacement iterable of leaves.                               |
+| Name                              | Contract                                                                                                                                 |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `tree_map_tensor(fn, tree)`       | Applies `fn` to every tensor leaf in a PyTree and leaves non-tensor leaves unchanged.                                                    |
+| `tree_flatten_with_inverse(tree)` | Returns a flat list of leaves and an inverse function that reconstructs the original PyTree shape from a replacement iterable of leaves. |
 
 ## `scaleValues` submodule reference
 
@@ -297,6 +307,16 @@ The `torch_einops_kit.device` submodule contains three utilities for device infe
 | `module_device(m)`                 | Returns the device of the first parameter or registered buffer in `m`. Returns `None` when `m` has neither parameters nor buffers.                                                                                                                              |
 | `move_inputs_to_device(device)`    | Decorator that recursively moves every tensor inside positional and keyword arguments to `device` before calling the wrapped function. Non-tensor values pass through unchanged.                                                                                |
 | `move_inputs_to_module_device(fn)` | Decorator for methods whose first argument is a `torch.nn.Module`. The decorator infers the target device with `module_device(self)` and moves every tensor argument after `self` to that device. If `module_device(self)` returns `None`, the call is a no-op. |
+
+## `nn` submodule reference
+
+The `torch_einops_kit.nn` submodule contains lightweight `torch.nn.Module` adapters and a `Sequential` constructor that ignores `None` values.
+
+| Name                   | Contract                                                                                                                                                                                                       |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Sequential(*modules)` | Equivalent to `nn.Sequential(*compact(modules))`. Every `None` argument is discarded before construction.                                                                                                      |
+| `Identity()`           | `torch.nn.Module` wrapper around `identity`. Unlike `torch.nn.Identity`, `Identity.forward` accepts additional positional arguments and keyword arguments and returns the first positional argument unchanged. |
+| `Lambda(fn)`           | `torch.nn.Module` wrapper that stores `fn` on `self.fn` and delegates `forward(*args, **kwargs)` to `fn(*args, **kwargs)` without changing the argument structure.                                             |
 
 ## `save_load` submodule reference
 
@@ -372,7 +392,7 @@ If you are an AI assistant adapting code from `torch-einops-utils`, use these tr
 This repository is not a repackaged mirror of upstream. This repository makes a different trade-off.
 
 - Upstream is intentionally compact.
-- This fork splits the implementation across focused modules such as `_helpers.py`, `_padding.py`, `device.py`, and `save_load.py` while still re-exporting most tensor helpers from the package root.
+- This fork splits the implementation across focused modules such as `_helpers.py`, `_padding.py`, `device.py`, `nn.py`, and `save_load.py` while still re-exporting most tensor helpers from the package root.
 - This fork adds strict typing, a `py.typed` marker, extensive tests, and detailed docstrings.
 - This fork is best treated as a typed, documented branch of the same utility idea rather than a literal import-path-compatible drop-in replacement.
 
@@ -380,6 +400,7 @@ This repository is not a repackaged mirror of upstream. This repository makes a 
 
 - `src/torch_einops_kit/` — package source.
 - `src/torch_einops_kit/device.py` — device inference and input-routing decorators.
+- `src/torch_einops_kit/nn.py` — lightweight `torch.nn.Module` adapters and a `Sequential` constructor that ignores `None` modules.
 - `src/torch_einops_kit/save_load.py` — checkpoint save / load decorator and nested reconstruction helpers.
 - `src/torch_einops_kit/scaleValues.py` — vector normalization, masked mean, and the `RMSNorm` layer.
 - `tests/` — regression tests and usage examples for helpers, masks, padding, device routing, and checkpoint reconstruction.
@@ -401,7 +422,6 @@ pytest
 Run static analysis:
 
 ```bash
-pyright
 ruff check .
 ```
 

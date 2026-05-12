@@ -1,15 +1,19 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator, Sequence
 from more_itertools import extract
-from pathlib import Path
-from torch import Tensor
+from torch import nn, Tensor
 from torch_einops_kit.einops import pack_one
+from torch_einops_kit.nn import Identity, Lambda
+from typing import TYPE_CHECKING
 import datetime
 import itertools
 import pytest
 import random
 import torch
+
+if TYPE_CHECKING:
+	from collections.abc import Callable, Iterator, Sequence
+	from pathlib import Path
 
 TENSOR_SPECS: list[tuple[str, Tensor]] = [
 	('rank-2-2x5-a', torch.tensor([[2.0, 3.0, 5.0, 73.0, 73.0], [7.0, 11.0, 13.0, 73.0, 73.0]])),
@@ -274,7 +278,11 @@ def scale_values_expected_tensor(request: pytest.FixtureRequest) -> Tensor:
 
 # ======== map_values Infrastructure ========
 
-MAP_VALUES_INT_LEAF_CASES: list[object] = [pytest.param(2, id='leaf-int-2'), pytest.param(13, id='leaf-int-13'), pytest.param(89, id='leaf-int-89')]
+MAP_VALUES_INT_LEAF_CASES: list[object] = [
+	pytest.param(2, id='leaf-int-2'),
+	pytest.param(13, id='leaf-int-13'),
+	pytest.param(89, id='leaf-int-89'),
+]
 
 @pytest.fixture(params=MAP_VALUES_INT_LEAF_CASES)
 def map_values_int_leaf(request: pytest.FixtureRequest) -> int:
@@ -314,9 +322,7 @@ def map_values_nested_structure(request: pytest.FixtureRequest) -> object:
 
 # ======== einops Infrastructure ========
 
-EINOPS_PACK_PATTERN_CASES: list[object] = [
-	pytest.param("*", id="pattern-star"),
-]
+EINOPS_PACK_PATTERN_CASES: list[object] = [pytest.param('*', id='pattern-star')]
 
 @pytest.fixture(params=EINOPS_PACK_PATTERN_CASES)
 def einops_pack_one_pattern(request: pytest.FixtureRequest) -> str:
@@ -325,3 +331,36 @@ def einops_pack_one_pattern(request: pytest.FixtureRequest) -> str:
 @pytest.fixture
 def pack_one_result(t: Tensor, einops_pack_one_pattern: str) -> tuple[Tensor, Sequence[tuple[int, ...] | list[int]]]:
 	return pack_one(t, einops_pack_one_pattern)
+
+# ======== nn Infrastructure ========
+
+def _lambda_affine_with_bias_tensor(tensor_value: Tensor, bias_tensor: Tensor, *, scale: float) -> Tensor:
+	return tensor_value.to(dtype=torch.float64) * scale + bias_tensor.to(dtype=torch.float64)
+
+@pytest.fixture
+def identity_call_arguments(t: Tensor) -> tuple[Tensor, tuple[Tensor, str], dict[str, str | int]]:
+	extra_tensor = torch.full_like(t, 89)
+	extra_args: tuple[Tensor, str] = (extra_tensor, 'north')
+	extra_kwargs: dict[str, str | int] = {'marker': 'east', 'count': 13}
+	return t, extra_args, extra_kwargs
+
+@pytest.fixture
+def lambda_unary_function() -> Callable[[Tensor], Tensor]:
+	def transform_tensor(tensor_value: Tensor) -> Tensor:
+		return tensor_value.to(dtype=torch.float64) * 2.0 + 13.0
+
+	return transform_tensor
+
+@pytest.fixture
+def lambda_invocation_case(t: Tensor) -> tuple[Callable[..., Tensor], tuple[Tensor, Tensor], dict[str, float], Tensor]:
+	bias_tensor = torch.full_like(t, 21, dtype=torch.float64)
+	args: tuple[Tensor, Tensor] = (t, bias_tensor)
+	kwargs: dict[str, float] = {'scale': 2.0}
+	expected_tensor = _lambda_affine_with_bias_tensor(*args, **kwargs)
+	return _lambda_affine_with_bias_tensor, args, kwargs, expected_tensor
+
+@pytest.fixture
+def sequential_case(t: Tensor, lambda_unary_function: Callable[[Tensor], Tensor]) -> tuple[tuple[nn.Module | None, ...], Tensor, Tensor]:
+	modules: tuple[nn.Module | None, ...] = (Identity(), None, Lambda(lambda_unary_function), None)
+	expected_tensor = lambda_unary_function(t)
+	return modules, t, expected_tensor

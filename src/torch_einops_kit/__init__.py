@@ -1,8 +1,8 @@
-"""Access PyTorch tensor-shaping, masking, padding, and checkpoint utilities.
+"""Access PyTorch tensor-shaping, masking, padding, `nn.Module` adaptation, and checkpoint utilities.
 
 You can use this package for optional-value handling, tensor slicing, rank alignment, mask
-construction, safe concatenation, sequence padding, PyTree traversal, and `einops`-pattern tensor
-packing.
+construction, safe concatenation, sequence padding, PyTree traversal, lightweight `nn.Module`
+adapters, and `einops` pattern tensor packing.
 
 Helpers
 -------
@@ -103,16 +103,21 @@ device
 	Determine `torch.nn.Module` devices and decorate callables to move `Tensor` arguments automatically.
 einops
 	Pack and unpack `Tensor` objects with `einops` patterns and paired inverse functions.
+nn
+	Adapt callables and optional module sequences to the `torch.nn.Module` interface.
 save_load
 	Decorate `torch.nn.Module` subclasses with checkpoint save, load, and reconstruction helpers.
 scaleValues
 	Compute exclusive prefix sums, normalize feature vectors, and compute masked means.
 """
+
 # isort: split
+from __future__ import annotations
+
 from torch_einops_kit._semiotics import decreasing as decreasing, zeroIndexed as zeroIndexed
 
 # isort: split
-from torch_einops_kit._types import (
+from torch_einops_kit._theTypes import (
 	ConfigArgsKwargs as ConfigArgsKwargs, DehydratedCheckpoint as DehydratedCheckpoint, DehydratedTorchNNModule as DehydratedTorchNNModule,
 	DimAndValue as DimAndValue, IdentityCallable as IdentityCallable, PSpec as PSpec, RVar as RVar, StrPath as StrPath,
 	SupportsIntIndex as SupportsIntIndex, T_co as T_co, TorchNNModule as TorchNNModule, TVar as TVar)
@@ -151,4 +156,8 @@ from torch_einops_kit.utils import tree_flatten_with_inverse as tree_flatten_wit
 # isort: split
 # NOTE These imports are for backwards compatibility. Linters ought to tell users to import from the correct submodules.
 from torch_einops_kit.einops import pack_with_inverse  # pyright: ignore[reportUnusedImport]
+from torch_einops_kit.nn import Identity, Lambda, Sequential  # pyright: ignore[reportUnusedImport]
 from torch_einops_kit.scaleValues import l2norm, masked_mean  # pyright: ignore[reportUnusedImport]
+
+# NOTE `broadcat` is the identifier used in lucidrains packages.
+broadcat = broadcast_cat

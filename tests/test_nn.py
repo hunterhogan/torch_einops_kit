@@ -1,24 +1,34 @@
 from __future__ import annotations
 
-from torch import nn
-from torch_einops_kit.device import module_device, move_inputs_to_device
+from torch import nn, Tensor
+from torch_einops_kit.nn import Identity, Lambda, Sequential
 import torch
 
-def test_module_device() -> None:
+def test_sequential() -> None:
+	# Test that it filters out None
+	seq: nn.Sequential = Sequential(nn.Linear(10, 10), None, nn.ReLU())
+	assert all(module is not None for module in seq)
 
-	assert module_device(nn.Linear(3, 3)) == torch.device('cpu')
-	assert module_device(nn.Identity()) is None
+	# Test forward pass
+	x: Tensor = torch.randn(2, 10)
+	out: Tensor = seq(x)
+	assert out.shape == (2, 10)
 
-def test_move_input_to_device() -> None:
+def test_lambda() -> None:
+	def fn(x: Tensor) -> Tensor:
+		return x * 2
 
-	def fn(t: torch.Tensor) -> torch.Tensor:
-		return t
+	lam: Lambda[..., Tensor] = Lambda(fn)
+	x: Tensor = torch.tensor([1.0, 2.0, 3.0])
+	assert torch.allclose(lam(x), torch.tensor([2.0, 4.0, 6.0]))
 
-	decorated = move_inputs_to_device(torch.device('cpu'))(fn)
-	decorated(torch.randn(3))
+def test_identity() -> None:
+	ident: Identity = Identity()
+	x: Tensor = torch.tensor([1.0, 2.0, 3.0])
+	assert torch.allclose(ident(x), x)
 
 """
-Some or all of the logic in this module may be protected by the following.
+Some of the logic in this module may be protected by the following.
 
 MIT License
 

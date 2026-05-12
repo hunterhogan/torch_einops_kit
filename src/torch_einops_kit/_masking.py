@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
 from einops import rearrange
+from functools import reduce
 from torch import arange, Tensor
-from torch.types import Number
 from torch_einops_kit import exists, safe
+from typing import TYPE_CHECKING
 import torch
+
+if TYPE_CHECKING:
+	from collections.abc import Callable, Sequence
+	from torch.types import Number
 
 def lens_to_mask(lens: Tensor, max_len: Number | None = None) -> Tensor:
 	"""Convert a sequence of length values into a boolean mask `Tensor`.
@@ -51,9 +55,9 @@ def lens_to_mask(lens: Tensor, max_len: Number | None = None) -> Tensor:
 
 	From dreamer4 [2], masking padded time steps in variable-length rollouts:
 
-		```python
+	```python
 		mask_for_gae = lens_to_mask(experience.lens, time)
-		```
+	```
 
 	References
 	----------
@@ -67,32 +71,31 @@ def lens_to_mask(lens: Tensor, max_len: Number | None = None) -> Tensor:
 	if not exists(max_len):
 		max_len = lens.amax().item()
 
-	seq: Tensor = arange(max_len, device = device)
+	seq: Tensor = arange(max_len, device=device)
 	lens = rearrange(lens, '... -> ... 1')
 	return seq < lens
 
 @safe
 def reduce_masks(masks: Sequence[Tensor], op: Callable[[Tensor, Tensor], Tensor]) -> Tensor | None:
-	"""Reduce a sequence of boolean mask `Tensor` values to a single mask using a binary operator.
+	"""Reduce a `Sequence` of `Tensor` values to a single `Tensor` using a binary operator.
 
 	You can use `reduce_masks` to apply any binary element-wise callable reduction over a sequence of
-	boolean masks. The `safe` [1] decorator filters out `None` values from `masks` before `op` is
+	`Tensor` values. The `safe` [1] decorator filters out `None` values from `masks` before `op` is
 	applied. If `masks` contains no non-`None` values, `reduce_masks` returns `None`. Reduction
-	proceeds left-to-right over the non-`None` elements of `masks`.
+	proceeds left-to-right over the elements of `masks`.
 
 	Parameters
 	----------
 	masks : Sequence[Tensor | None]
-		A `Sequence` of boolean `Tensor` or `None` values. `None` values are filtered out before `op`
-		is applied. All non-`None` `Tensor` values must have the same shape.
+		A `Sequence` of `Tensor` or `None` values. `None` values are filtered out before `op` is
+		applied.
 	op : Callable[[Tensor, Tensor], Tensor]
-		A binary callable that accepts two `Tensor` arguments and returns a `Tensor`. Common choices
-		are `torch.logical_and` [2] and `torch.logical_or` [3].
+		A binary callable that accepts two `Tensor` arguments and returns a `Tensor`.
 
 	Returns
 	-------
 	mask : Tensor | None
-		The result of applying `op` cumulatively, left-to-right, over the non-`None` members of
+		The result of applying `op` cumulatively, left-to-right, over the non-`None` elements of
 		`masks`. Returns `None` if no non-`None` values remain after filtering.
 
 	See Also
@@ -102,7 +105,7 @@ def reduce_masks(masks: Sequence[Tensor], op: Callable[[Tensor, Tensor], Tensor]
 
 	Examples
 	--------
-	From the test suite [4]:
+	From the test suite [2]:
 
 	>>> import torch
 	>>> from torch_einops_kit import reduce_masks
@@ -119,19 +122,10 @@ def reduce_masks(masks: Sequence[Tensor], op: Callable[[Tensor, Tensor], Tensor]
 	----------
 	[1] torch_einops_kit.safe
 
-	[2] torch.logical_and - PyTorch documentation
-		https://pytorch.org/docs/stable/generated/torch.logical_and.html
-	[3] torch.logical_or - PyTorch documentation
-		https://pytorch.org/docs/stable/generated/torch.logical_or.html
-	[4] tests/test_masking.py
+	[2] tests/test_masking.py
 
 	"""
-	mask, *rest_masks = masks
-
-	for rest_mask in rest_masks:
-		mask: Tensor = op(mask, rest_mask)
-
-	return mask
+	return reduce(op, masks) if masks else None
 
 def and_masks(masks: Sequence[Tensor | None]) -> Tensor | None:
 	"""Reduce a `Sequence` of boolean mask `Tensor` values to a single mask using element-wise logical AND.
@@ -174,9 +168,9 @@ def and_masks(masks: Sequence[Tensor | None]) -> Tensor | None:
 	From sdft_pytorch [4], intersecting an end-of-sequence mask with an initial-token mask to exclude
 	padding and masked prefix positions from the loss calculation:
 
-		```python
+	```python
 		mask = and_masks([eos_mask, init_tokens_mask])
-		```
+	```
 
 	References
 	----------
@@ -226,7 +220,7 @@ def or_masks(masks: Sequence[Tensor | None]) -> Tensor | None:
 	return reduce_masks(masks, torch.logical_or)
 
 """
-Some or all of the logic in this module may be protected by the following.
+Some of the logic in this module may be protected by the following.
 
 MIT License
 

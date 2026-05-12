@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 from os import PathLike
-from torch import Tensor
 from torch.nn import Module
-from typing import Any, Literal, ParamSpec, Protocol, TypeAlias, TypedDict, TypeVar
+from typing import Any, Literal, ParamSpec, Protocol, TYPE_CHECKING, TypeAlias, TypedDict, TypeVar
+
+if TYPE_CHECKING:
+	from torch import Tensor
 
 ConfigArgsKwargs:	TypeAlias = tuple[tuple[Any, ...], dict[Any, Any]]
 """Represent the positional arguments and keyword arguments of a decorated constructor.

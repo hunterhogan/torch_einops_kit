@@ -21,11 +21,16 @@ References
 	https://einops.rocks/api/pack_unpack/
 [2] torch_einops_kit
 """
-from collections.abc import Callable, Sequence
+
+from __future__ import annotations
+
 from einops import pack, unpack
 from torch import is_tensor, Tensor
 from torch_einops_kit import default, first
-from typing import overload
+from typing import overload, TYPE_CHECKING
+
+if TYPE_CHECKING:
+	from collections.abc import Callable, Sequence
 
 def pack_one(t: Tensor, pattern: str) -> tuple[Tensor, Sequence[tuple[int, ...] | list[int]]]:
 	"""Pack one `Tensor` and return shape metadata for paired reconstruction.
@@ -94,30 +99,30 @@ def pack_with_inverse(t: Tensor | list[Tensor], pattern: str) -> tuple[Tensor, C
 	--------
 	Pack a single tensor and recover the original shape [2]:
 
-		```python
+	```python
 		import torch
 		from torch_einops_kit import pack_with_inverse
 
 		t = torch.randn(3, 12, 2, 2)
-		packed, inverse = pack_with_inverse(t, "b * d")
+		packed, inverse = pack_with_inverse(t, 'b * d')
 		# packed.shape == (3, 24, 2)
 		recovered = inverse(packed)
 		# recovered.shape == (3, 12, 2, 2)
-		```
+	```
 
 	Pack a list of tensors and unpack with an overriding pattern [2]:
 
-		```python
+	```python
 		t = torch.randn(3, 12, 2)
 		u = torch.randn(3, 4, 2)
-		packed, inverse = pack_with_inverse([t, u], "b * d")
+		packed, inverse = pack_with_inverse([t, u], 'b * d')
 		# packed.shape == (3, 28, 2)
 
 		reduced = packed.sum(dim=-1)
-		t_out, u_out = inverse(reduced, "b *")
+		t_out, u_out = inverse(reduced, 'b *')
 		# t_out.shape == (3, 12)
 		# u_out.shape == (3, 4)
-		```
+	```
 
 	References
 	----------
@@ -129,11 +134,11 @@ def pack_with_inverse(t: Tensor | list[Tensor], pattern: str) -> tuple[Tensor, C
 	is_one: bool = is_tensor(t)
 
 	if is_one:
-		sequenceT: Sequence[Tensor] = [t]  # ty:ignore[invalid-assignment]
+		sequenceT: Sequence[Tensor] = [t]
 	else:
 		sequenceT = t
 
-	packed, packed_shape = pack(sequenceT, pattern)  # ty:ignore[invalid-argument-type]
+	packed, packed_shape = pack(sequenceT, pattern)
 
 	def inverse(out: Tensor, inv_pattern: str | None = None) -> Tensor | list[Tensor]:
 		inv_pattern = default(inv_pattern, pattern)

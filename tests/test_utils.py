@@ -1,4 +1,5 @@
-from collections.abc import Sequence
+from __future__ import annotations
+
 from torch import tensor
 from torch_einops_kit import (
 	align_dims_left, and_masks, exists, lens_to_mask, maybe, or_masks, pad_at_dim, pad_left_at_dim, pad_left_at_dim_to, pad_left_ndim_to,
@@ -7,7 +8,11 @@ from torch_einops_kit import (
 from torch_einops_kit.einops import pack_with_inverse
 from torch_einops_kit.scaleValues import masked_mean
 from torch_einops_kit.utils import tree_flatten_with_inverse, tree_map_tensor
+from typing import TYPE_CHECKING
 import torch
+
+if TYPE_CHECKING:
+	from collections.abc import Sequence
 
 def test_exist() -> None:
 	assert not exists(None)
@@ -45,20 +50,20 @@ def test_align_ndim_left() -> None:
 
 def test_pad_at_dim() -> None:
 	t = torch.randn(3, 6, 1)
-	padded = pad_at_dim(t, (0, 1), dim = 1)
+	padded = pad_at_dim(t, (0, 1), dim=1)
 
 	assert padded.shape == (3, 7, 1)
-	assert torch.allclose(padded, pad_right_at_dim(t, 1, dim = 1))
-	assert not torch.allclose(padded, pad_left_at_dim(t, 1, dim = 1))
+	assert torch.allclose(padded, pad_right_at_dim(t, 1, dim=1))
+	assert not torch.allclose(padded, pad_left_at_dim(t, 1, dim=1))
 
 	t = torch.randn(3, 6, 1)
-	padded = pad_right_at_dim_to(t, 7, dim = 1)
+	padded = pad_right_at_dim_to(t, 7, dim=1)
 	assert padded.shape == (3, 7, 1)
 
-	padded = pad_left_at_dim_to(t, 7, dim = 1)
+	padded = pad_left_at_dim_to(t, 7, dim=1)
 	assert padded.shape == (3, 7, 1)
 
-	padded = pad_right_at_dim_to(t, 6, dim = 1)
+	padded = pad_right_at_dim_to(t, 6, dim=1)
 	assert padded.shape == (3, 6, 1)
 
 def test_tree_flatten_with_inverse() -> None:
@@ -68,7 +73,7 @@ def test_tree_flatten_with_inverse() -> None:
 	out = inverse((first + 1, *rest))
 	assert out == (2, (2, 3), 4)
 
-def test_tree_map_tensor()	-> None:
+def test_tree_map_tensor() -> None:
 	tree = (1, tensor(2), 3)
 	tree = tree_map_tensor(lambda t: t + 1, tree)
 	assert tree[0] == 1
@@ -80,7 +85,7 @@ def test_pack_with_inverse() -> None:
 	t, inverse = pack_with_inverse(t, 'b * d')
 
 	assert t.shape == (3, 24, 2)
-# TODO look at this return type.
+	# TODO look at this return type.
 	t = inverse(t)
 	assert t.shape == (3, 12, 2, 2)
 
@@ -88,7 +93,7 @@ def test_pack_with_inverse() -> None:
 	t, inverse = pack_with_inverse([t, u], 'b * d')
 	assert t.shape == (3, 28, 2)
 
-	t = t.sum(dim = -1)
+	t = t.sum(dim=-1)
 	t, u = inverse(t, 'b *')
 	assert t.shape == (3, 12, 2)
 	assert u.shape == (3, 4)
@@ -100,25 +105,21 @@ def test_better_pad_sequence() -> None:
 	z: torch.Tensor = torch.randn(2, 1, 5)
 	tensors: Sequence[torch.Tensor] = [x, y, z]
 
-	packed, lens = pad_sequence(tensors=tensors, dim = 1, return_lens = True)
+	packed, lens = pad_sequence(tensors=tensors, dim=1, return_lens=True)
 	assert packed.shape == (3, 2, 4, 5)
-	assert lens.tolist() == [4, 3, 1] # pyright: ignore[reportUnknownMemberType]
+	assert lens.tolist() == [4, 3, 1]
 
 	mask = lens_to_mask(lens)
-	assert torch.allclose(mask.sum(dim = -1), lens)
+	assert torch.allclose(mask.sum(dim=-1), lens)
 
 def test_pad_sequence_uneven_images() -> None:
-	images = [
-		torch.randn(3, 16, 17),
-		torch.randn(3, 15, 18),
-		torch.randn(3, 17, 16)
-	]
+	images = [torch.randn(3, 16, 17), torch.randn(3, 15, 18), torch.randn(3, 17, 16)]
 
-	padded_height = pad_sequence(images, dim = -2, return_stacked = False)
+	padded_height = pad_sequence(images, dim=-2, return_stacked=False)
 	assert len(padded_height) == 3
 	assert all(t.shape[1] == 17 for t in padded_height)
 
-	stacked = pad_sequence_and_cat(padded_height, dim_cat = 0)
+	stacked = pad_sequence_and_cat(padded_height, dim_cat=0)
 	assert stacked.shape == (9, 17, 18)
 
 def test_and_masks() -> None:
@@ -136,38 +137,38 @@ def test_or_masks() -> None:
 	assert (or_masks([mask1, None, mask2]) == tensor([True, True])).all()
 
 def test_masked_mean() -> None:
-	t = tensor([1., 2., 3., 4.])
+	t = tensor([1.0, 2.0, 3.0, 4.0])
 	assert torch.allclose(masked_mean(t), tensor(2.5))
-	assert torch.allclose(masked_mean(t, dim = 0), tensor(2.5))
+	assert torch.allclose(masked_mean(t, dim=0), tensor(2.5))
 
 	mask = tensor([True, False, True, False])
-	assert torch.allclose(masked_mean(t, mask = mask), tensor(2.0))
+	assert torch.allclose(masked_mean(t, mask=mask), tensor(2.0))
 
 	mask = tensor([False, False, False, False])
-	assert torch.allclose(masked_mean(t, mask = mask), tensor(0.0))
+	assert torch.allclose(masked_mean(t, mask=mask), tensor(0.0))
 
-	t = tensor([[1., 2.], [3., 4.]])
+	t = tensor([[1.0, 2.0], [3.0, 4.0]])
 	mask = tensor([[True, False], [True, True]])
 
-	assert torch.allclose(masked_mean(t, mask = mask, dim = 0), tensor([2.0, 4.0]))
+	assert torch.allclose(masked_mean(t, mask=mask, dim=0), tensor([2.0, 4.0]))
 
-	assert torch.allclose(masked_mean(t, mask = mask, dim = 1), tensor([1.0, 3.5]))
+	assert torch.allclose(masked_mean(t, mask=mask, dim=1), tensor([1.0, 3.5]))
 
 	t = torch.randn(2, 3, 4)
 	mask = torch.ones(2, 3, 4).bool()
 	mask[0, :, :] = False
 
-	res = masked_mean(t, mask = mask, dim = (1, 2))
+	res = masked_mean(t, mask=mask, dim=(1, 2))
 	assert res.shape == (2,)
-	assert torch.allclose(res[0], tensor(0.0), atol = 1e-4)
+	assert torch.allclose(res[0], tensor(0.0), atol=1e-4)
 	assert torch.allclose(res[1], t[1].mean())
 
 	t = torch.randn(2, 3, 4)
 	mask = tensor([True, False])
-	res = masked_mean(t, mask = mask, dim = (1, 2))
+	res = masked_mean(t, mask=mask, dim=(1, 2))
 	assert res.shape == (2,)
 	assert torch.allclose(res[0], t[0].mean())
-	assert torch.allclose(res[1], tensor(0.0), atol = 1e-4)
+	assert torch.allclose(res[1], tensor(0.0), atol=1e-4)
 
 def test_slice_at_dim() -> None:
 	t = torch.randn(3, 4, 5)
@@ -176,19 +177,19 @@ def test_slice_at_dim() -> None:
 	assert res.shape == (3, 4, 2)
 	assert torch.allclose(res, t[:, :, 1:3])
 
-	res = slice_at_dim(t, slice(None, 2), dim = 1)
+	res = slice_at_dim(t, slice(None, 2), dim=1)
 	assert res.shape == (3, 2, 5)
 	assert torch.allclose(res, t[:, :2, :])
 
-	res = slice_at_dim(t, slice(2, None), dim = -2)
+	res = slice_at_dim(t, slice(2, None), dim=-2)
 	assert res.shape == (3, 2, 5)
 	assert torch.allclose(res, t[:, 2:, :])
 
-	res = slice_left_at_dim(t, 2, dim = 1)
+	res = slice_left_at_dim(t, 2, dim=1)
 	assert res.shape == (3, 2, 5)
 	assert torch.allclose(res, t[:, :2, :])
 
-	res = slice_right_at_dim(t, 2, dim = 1)
+	res = slice_right_at_dim(t, 2, dim=1)
 	assert res.shape == (3, 2, 5)
 	assert torch.allclose(res, t[:, -2:, :])
 

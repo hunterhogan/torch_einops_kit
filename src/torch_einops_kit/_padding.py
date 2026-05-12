@@ -1,12 +1,16 @@
-from collections.abc import Callable, Sequence
+from __future__ import annotations
+
 from torch import cat, stack, Tensor, tensor
 from torch_einops_kit import decreasing, DimAndValue, first, zeroIndexed
-from typing import Literal, overload
+from typing import Literal, overload, TYPE_CHECKING
 from typing_extensions import Unpack
 import torch
 import torch.nn.functional as F
 
-def pad_at_dim(t: Tensor, pad: tuple[int, int], *, dim: int = -1, value: float = 0.) -> Tensor:
+if TYPE_CHECKING:
+	from collections.abc import Callable, Sequence
+
+def pad_at_dim(t: Tensor, pad: tuple[int, int], *, dim: int = -1, value: float = 0.0) -> Tensor:
 	"""Pad `t` along `dim`, inserting `value` at each end by the amounts in `pad`.
 
 	You can use `pad_at_dim` to add fill elements to either side of any dimension of `t`. Negative
@@ -48,15 +52,15 @@ def pad_at_dim(t: Tensor, pad: tuple[int, int], *, dim: int = -1, value: float =
 	From dreamer4 [3], inserting a leading zero token to shift action tokens forward by one position
 	in the time dimension:
 
-		```python
+	```python
 		action_tokens = pad_at_dim(action_tokens[:, :-1], (1, 0), value=0.0, dim=1)
-		```
+	```
 
 	From locoformer [4], creating a one-step-delayed copy of an action sequence:
 
-		```python
+	```python
 		past_action = pad_at_dim(action, (1, -1), dim=-2)
-		```
+	```
 
 	References
 	----------
@@ -73,7 +77,7 @@ def pad_at_dim(t: Tensor, pad: tuple[int, int], *, dim: int = -1, value: float =
 	"""
 	dims_from_right: int = ((decreasing * dim) - zeroIndexed + t.ndim) % t.ndim
 	zeros: tuple[Literal[0], ...] = (0, 0) * dims_from_right
-	return F.pad(t, (*zeros, *pad), value = value)
+	return F.pad(t, (*zeros, *pad), value=value)
 
 def pad_left_at_dim(t: Tensor, pad: int, **kwargs: Unpack[DimAndValue]) -> Tensor:
 	"""Pad `t` on the left side of a dimension by a fixed number of fill elements.
@@ -107,9 +111,9 @@ def pad_left_at_dim(t: Tensor, pad: int, **kwargs: Unpack[DimAndValue]) -> Tenso
 	From pi-zero-pytorch [3], prepending a start token marker to a sequence of discrete
 	action identifiers:
 
-		```python
+	```python
 		discrete_action_ids_with_start = pad_left_at_dim(discrete_action_ids + 1, 1)
-		```
+	```
 
 	References
 	----------
@@ -153,13 +157,13 @@ def pad_right_at_dim(t: Tensor, pad: int, **kwargs: Unpack[DimAndValue]) -> Tens
 	--------
 	From the test suite [3], verifying that `pad_right_at_dim` appends one element along a dimension:
 
-		```python
+	```python
 		import torch
 		from torch_einops_kit import pad_right_at_dim
 
 		t = torch.randn(3, 6, 1)
 		assert pad_right_at_dim(t, 1, dim=1).shape == torch.Size([3, 7, 1])
-		```
+	```
 
 	References
 	----------
@@ -224,7 +228,7 @@ def pad_left_at_dim_to(t: Tensor, length: int, dim: int = -1, **kwargs: float) -
 	if curr_len >= length:
 		return t
 
-	return pad_left_at_dim(t, length - curr_len, dim = dim, **kwargs)
+	return pad_left_at_dim(t, length - curr_len, dim=dim, **kwargs)
 
 def pad_right_at_dim_to(t: Tensor, length: int, dim: int = -1, **kwargs: float) -> Tensor:
 	"""Pad `t` on the right side of `dim` until `dim` reaches `length`.
@@ -262,9 +266,9 @@ def pad_right_at_dim_to(t: Tensor, length: int, dim: int = -1, **kwargs: float) 
 	From dreamer4 [2], bringing variable-length action sequences to a uniform time length before
 	batching:
 
-		```python
+	```python
 		tensors = [pad_right_at_dim_to(t, max_time, dim=dim) for t in tensors]
-		```
+	```
 
 	References
 	----------
@@ -277,7 +281,7 @@ def pad_right_at_dim_to(t: Tensor, length: int, dim: int = -1, **kwargs: float) 
 	if curr_len >= length:
 		return t
 
-	return pad_right_at_dim(t, length - curr_len, dim = dim, **kwargs)
+	return pad_right_at_dim(t, length - curr_len, dim=dim, **kwargs)
 
 @overload
 def pad_sequence(
@@ -310,7 +314,12 @@ def pad_sequence(
 	pad_lens: bool = False
 ) -> tuple[list[Tensor], Tensor] | None: ...
 def pad_sequence(
-	tensors: Sequence[Tensor], *, dim: int = -1, value: float = 0., left: bool = False, dim_stack: int = 0,
+	tensors: Sequence[Tensor],
+	*,
+	dim: int = -1,
+	value: float = 0.0,
+	left: bool = False,
+	dim_stack: int = 0,
 	return_stacked: bool = True,
 	return_lens: bool = False,
 	pad_lens: bool = False
@@ -383,16 +392,16 @@ def pad_sequence(
 	From sdft-pytorch [5], left-padding variable-length prompt token sequences and retrieving
 	per-sample padding widths for start-position tracking:
 
-		```python
+	```python
 		student_prompt_ids, student_seq_start_pos = pad_sequence(student_prompt_ids, return_lens=True, left=True, pad_lens=True)
-		```
+	```
 
 	From pi-zero-pytorch [6], right-padding a list of discrete action id tensors with a sentinel fill
 	value of `-1`:
 
-		```python
+	```python
 		discrete_action_ids = pad_sequence([tensor(ids) for ids in discrete_action_ids], value=-1)
-		```
+	```
 
 	References
 	----------
@@ -416,10 +425,10 @@ def pad_sequence(
 		max_len: int = max(lens)
 
 		pad_fn: Callable[..., Tensor] = pad_left_at_dim if left else pad_right_at_dim
-		padded_tensors: list[Tensor] = [pad_fn(t, max_len - t_len, dim = dim, value = value) for t, t_len in zip(tensors, lens, strict=True)]
+		padded_tensors: list[Tensor] = [pad_fn(t, max_len - t_len, dim=dim, value=value) for t, t_len in zip(tensors, lens, strict=True)]
 
 		if return_stacked:
-			output = stack(padded_tensors, dim = dim_stack)
+			output = stack(padded_tensors, dim=dim_stack)
 		else:
 			output = padded_tensors
 
@@ -488,9 +497,9 @@ def pad_sequence_and_cat(tensors: Sequence[Tensor], *, dim_cat: int = 0, dim: in
 		https://pytorch.org/docs/stable/generated/torch.cat.html
 	[3] tests/test_utils.py
 	"""
-	padded: Tensor | list[Tensor] | None = pad_sequence(tensors, dim = dim, value = value, left = left, return_stacked = False, return_lens = False)
+	padded: Tensor | list[Tensor] | None = pad_sequence(tensors, dim=dim, value=value, left=left, return_stacked=False, return_lens=False)
 	if padded is not None:
-		return cat(padded, dim = dim_cat)
+		return cat(padded, dim=dim_cat)
 	return padded
 
 """

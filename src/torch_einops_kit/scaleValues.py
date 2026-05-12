@@ -18,6 +18,7 @@ Classes
 	RMSNorm
 		Normalize feature vectors with root-mean-square scaling and a learned `gamma` parameter.
 """
+
 from __future__ import annotations
 
 from torch import nn, SymInt, Tensor
@@ -64,8 +65,7 @@ def exclusive_cumsum(t: Tensor, dim: int = -1) -> Tensor:
 	[1] torch.Tensor.cumsum - PyTorch documentation
 		https://pytorch.org/docs/stable/generated/torch.Tensor.cumsum.html
 	"""
-	return t.cumsum(dim = dim) - t
-
+	return t.cumsum(dim=dim) - t
 
 def l2norm(t: Tensor) -> Tensor:
 	"""Normalize `Tensor` vectors to unit length.
@@ -94,9 +94,9 @@ def l2norm(t: Tensor) -> Tensor:
 	Normalize `Tensor` attention query, `q`, and `Tensor` attention key, `k`, before computing
 	similarity scores: [2]
 
-		```python
+	```python
 		q, k = map(l2norm, (q, k))
-		```
+	```
 
 	References
 	----------
@@ -105,7 +105,7 @@ def l2norm(t: Tensor) -> Tensor:
 	[2] BS-RoFormer.mel_band_roformer.LinearAttention
 		https://github.com/lucidrains/BS-RoFormer
 	"""
-	return F.normalize(t, dim = -1, p = 2)
+	return F.normalize(t, dim=-1, p=2)
 
 def masked_mean(t: Tensor, mask: Tensor | None = None, dim: torch.Size | list[int] | tuple[int, ...] | int | None = None, eps: float = 1e-5) -> Tensor:
 	"""Compute the mean of `t` over positions selected by `mask`.
@@ -146,31 +146,31 @@ def masked_mean(t: Tensor, mask: Tensor | None = None, dim: torch.Size | list[in
 	--------
 	Compute the mean of all elements with no mask [3]:
 
-		```python
+	```python
 		from torch import tensor
 		from torch_einops_kit import masked_mean
 
 		t = tensor([1.0, 2.0, 3.0, 4.0])
 		result = masked_mean(t)
 		# result == tensor(2.5)
-		```
+	```
 
 	Select only the `True` positions using a boolean mask [3]:
 
-		```python
+	```python
 		mask = tensor([True, False, True, False])
 		result = masked_mean(t, mask=mask)
 		# result == tensor(2.0)
-		```
+	```
 
 	Average along a specific dimension [3]:
 
-		```python
+	```python
 		t = tensor([[1.0, 2.0], [3.0, 4.0]])
 		mask = tensor([[True, False], [True, True]])
 		result = masked_mean(t, mask=mask, dim=1)
 		# result == tensor([1.0, 3.5])
-		```
+	```
 
 	References
 	----------
@@ -182,7 +182,7 @@ def masked_mean(t: Tensor, mask: Tensor | None = None, dim: torch.Size | list[in
 
 	"""
 	if not exists(mask):
-		return t.mean(dim = dim) if exists(dim) else t.mean()
+		return t.mean(dim=dim) if exists(dim) else t.mean()
 
 	if mask.ndim < t.ndim:
 		mask = pad_right_ndim(mask, t.ndim - mask.ndim)
@@ -192,10 +192,10 @@ def masked_mean(t: Tensor, mask: Tensor | None = None, dim: torch.Size | list[in
 	if not exists(dim):
 		return t[mask].mean() if mask.any() else t[mask].sum()
 
-	num: Tensor = (t * mask).sum(dim = dim)
-	den: Tensor = mask.sum(dim = dim)
+	num: Tensor = (t * mask).sum(dim=dim)
+	den: Tensor = mask.sum(dim=dim)
 
-	return num / den.clamp(min = eps)
+	return num / den.clamp(min=eps)
 
 class RMSNorm(Module):
 	"""Normalize feature vectors with root-mean-square scaling and a learned rescaling parameter.
@@ -267,6 +267,7 @@ class RMSNorm(Module):
 	[5] bs_roformer.mel_band_roformer - Mel-Band RoFormer source
 		https://github.com/lucidrains/BS-RoFormer
 	"""
+
 	def __init__(self, dim: int | SymInt) -> None:
 		super().__init__()
 		self.scale: float = float(dim) ** 0.5
