@@ -107,7 +107,8 @@ def l2norm(t: Tensor) -> Tensor:
 	"""
 	return F.normalize(t, dim=-1, p=2)
 
-def masked_mean(t: Tensor, mask: Tensor | None = None, dim: torch.Size | list[int] | tuple[int, ...] | int | None = None, eps: float = 1e-5) -> Tensor:
+def masked_mean(t: Tensor, mask: Tensor | None = None, dim: torch.Size | list[int] | tuple[int, ...] | int | None = None, eps: float = 1e-5
+				, *, keepdim: bool = False) -> Tensor:
 	"""Compute the mean of `t` over positions selected by `mask`.
 
 	You can use this function to average only the elements of `t` where `mask` is `True`, ignoring
@@ -131,6 +132,9 @@ def masked_mean(t: Tensor, mask: Tensor | None = None, dim: torch.Size | list[in
 	eps : float = 1e-5
 		A small value added to the denominator to prevent division by zero when computing the masked
 		mean along a dimension.
+	keepdim : bool = False
+		When `True`, the reduced dimension is retained as a size-one dimension in `result`, allowing
+		`result` to broadcast against `t`.
 
 	Returns
 	-------
@@ -172,6 +176,15 @@ def masked_mean(t: Tensor, mask: Tensor | None = None, dim: torch.Size | list[in
 		# result == tensor([1.0, 3.5])
 	```
 
+	Compute the sequence-level mean of transformer activations with `keepdim=True` to preserve the
+	sequence dimension for broadcasting, used in the mean-variance split residual update [4][5]:
+
+	```python
+		mean_x = masked_mean(x, mask=mask, dim=-2, keepdim=True)
+		mean_residual = masked_mean(residual, mask=mask, dim=-2, keepdim=True)
+		centered_x = x - mean_x
+	```
+
 	References
 	----------
 	[1] torch.Tensor.mean - PyTorch documentation
@@ -180,20 +193,20 @@ def masked_mean(t: Tensor, mask: Tensor | None = None, dim: torch.Size | list[in
 
 	[3] tests.test_utils.test_masked_mean
 
+	[4] Lu, P. (2026). Mean Mode Screaming: Mean-Variance Split Residuals for 1000-Layer Diffusion
+		Transformers. arXiv:2605.06169.
+		https://arxiv.org/abs/2605.06169
+	[5] x_transformers.x_transformers.MVSplitResidualUpdate.forward - lucidrains/x-transformers
+		https://github.com/lucidrains/x-transformers
+
 	"""
 	if not exists(mask):
-		return t.mean(dim=dim) if exists(dim) else t.mean()
+		mask = torch.ones_like(t, dtype=torch.bool)
 
-	if mask.ndim < t.ndim:
-		mask = pad_right_ndim(mask, t.ndim - mask.ndim)
+	mask = pad_right_ndim(mask, max(0, t.ndim - mask.ndim)).expand_as(t)
 
-	mask = mask.expand_as(t)
-
-	if not exists(dim):
-		return t[mask].mean() if mask.any() else t[mask].sum()
-
-	num: Tensor = (t * mask).sum(dim=dim)
-	den: Tensor = mask.sum(dim=dim)
+	num: Tensor = (t * mask).sum(dim=dim, keepdim=keepdim)
+	den: Tensor = mask.sum(dim=dim, keepdim=keepdim)
 
 	return num / den.clamp(min=eps)
 

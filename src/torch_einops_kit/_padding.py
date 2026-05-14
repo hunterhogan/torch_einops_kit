@@ -289,32 +289,42 @@ def pad_sequence(
 	return_stacked: Literal[True] = True,
 	return_lens: Literal[False] = False,
 	pad_lens: bool = False
-) -> Tensor | None: ...
-# `list[Tensor] | None` could create confusion: see the tuple | None overloads.
+) -> Tensor: ...
 @overload
 def pad_sequence(
 	tensors: Sequence[Tensor], *, dim: int = -1, value: float = 0., left: bool = False, dim_stack: int = 0,
 	return_stacked: Literal[False],
 	return_lens: Literal[False] = False,
 	pad_lens: bool = False
-) -> list[Tensor] | None: ...
-# TODO return `tuple | None` is problematic. See `test_better_pad_sequence`. Pyright gives a confusing error: "None is not iterable" when trying to unpack the tuple.
+) -> list[Tensor]: ...
 @overload
 def pad_sequence(
 	tensors: Sequence[Tensor], *, dim: int = -1, value: float = 0., left: bool = False, dim_stack: int = 0,
 	return_stacked: Literal[True] = True,
 	return_lens: Literal[True],
 	pad_lens: bool = False
-) -> tuple[Tensor, Tensor] | None: ...
+) -> tuple[Tensor, Tensor]: ...
 @overload
 def pad_sequence(
 	tensors: Sequence[Tensor], *, dim: int = -1, value: float = 0., left: bool = False, dim_stack: int = 0,
 	return_stacked: Literal[False],
 	return_lens: Literal[True],
 	pad_lens: bool = False
-) -> tuple[list[Tensor], Tensor] | None: ...
+) -> tuple[list[Tensor], Tensor]: ...
+@overload
 def pad_sequence(
-	tensors: Sequence[Tensor],
+	tensors: list[Tensor] = [],  # noqa: B006
+	*, dim: int = -1, value: float = 0.0, left: bool = False, dim_stack: int = 0,
+	return_stacked: bool = True, return_lens: bool = False, pad_lens: bool = False
+) -> None: ...
+@overload
+def pad_sequence(
+	tensors: tuple[()] = (),
+	*, dim: int = -1, value: float = 0.0, left: bool = False, dim_stack: int = 0,
+	return_stacked: bool = True, return_lens: bool = False, pad_lens: bool = False
+) -> None: ...
+def pad_sequence(
+	tensors: Sequence[Tensor] = (),
 	*,
 	dim: int = -1,
 	value: float = 0.0,
@@ -443,7 +453,13 @@ def pad_sequence(
 
 	return output
 
-def pad_sequence_and_cat(tensors: Sequence[Tensor], *, dim_cat: int = 0, dim: int = -1, value: float = 0., left: bool = False) -> Tensor | None:
+@overload
+def pad_sequence_and_cat(tensors: Sequence[Tensor], *, dim_cat: int = 0, dim: int = -1, value: float = 0., left: bool = False) -> Tensor:...
+@overload
+def pad_sequence_and_cat(tensors: list[Tensor] = [], *, dim_cat: int = 0, dim: int = -1, value: float = 0., left: bool = False) -> None:...  # noqa: B006
+@overload
+def pad_sequence_and_cat(tensors: tuple[()]=(), *, dim_cat: int = 0, dim: int = -1, value: float = 0., left: bool = False) -> None:...
+def pad_sequence_and_cat(tensors: Sequence[Tensor]=(), *, dim_cat: int = 0, dim: int = -1, value: float = 0., left: bool = False) -> Tensor | None:
 	"""Pad `tensors` to a shared length along `dim` and concatenate along `dim_cat`.
 
 	You can use `pad_sequence_and_cat` to align and merge a heterogeneous-length sequence of `Tensor`
@@ -498,12 +514,12 @@ def pad_sequence_and_cat(tensors: Sequence[Tensor], *, dim_cat: int = 0, dim: in
 	[3] tests/test_utils.py
 	"""
 	padded: Tensor | list[Tensor] | None = pad_sequence(tensors, dim=dim, value=value, left=left, return_stacked=False, return_lens=False)
-	if padded is not None:
+	if padded is not None: # pyright: ignore[reportUnnecessaryComparison]
 		return cat(padded, dim=dim_cat)
 	return padded
 
 """
-Some or all of the logic in this module may be protected by the following.
+Some of the logic in this module may be protected by the following.
 
 MIT License
 

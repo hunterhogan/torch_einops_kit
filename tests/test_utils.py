@@ -6,7 +6,7 @@ from torch_einops_kit import (
 	pad_ndim, pad_right_at_dim, pad_right_at_dim_to, pad_right_ndim_to, pad_sequence, pad_sequence_and_cat, safe_cat, safe_stack,
 	shape_with_replace, slice_at_dim, slice_left_at_dim, slice_right_at_dim)
 from torch_einops_kit.einops import pack_with_inverse
-from torch_einops_kit.scaleValues import masked_mean
+from torch_einops_kit.scaleValues import exclusive_cumsum, masked_mean
 from torch_einops_kit.utils import tree_flatten_with_inverse, tree_map_tensor
 from typing import TYPE_CHECKING
 import torch
@@ -107,7 +107,7 @@ def test_better_pad_sequence() -> None:
 
 	packed, lens = pad_sequence(tensors=tensors, dim=1, return_lens=True)
 	assert packed.shape == (3, 2, 4, 5)
-	assert lens.tolist() == [4, 3, 1]
+	assert lens.tolist() == [4, 3, 1] # pyright: ignore[reportUnknownMemberType]
 
 	mask = lens_to_mask(lens)
 	assert torch.allclose(mask.sum(dim=-1), lens)
@@ -169,6 +169,22 @@ def test_masked_mean() -> None:
 	assert res.shape == (2,)
 	assert torch.allclose(res[0], t[0].mean())
 	assert torch.allclose(res[1], tensor(0.0), atol=1e-4)
+
+	res_keepdim = masked_mean(t, mask = mask, dim = (1, 2), keepdim = True)
+	assert res_keepdim.shape == (2, 1, 1)
+	assert torch.allclose(res_keepdim.squeeze(), res)
+
+	res_no_mask_keepdim = masked_mean(t, dim = (1, 2), keepdim = True)
+	assert res_no_mask_keepdim.shape == (2, 1, 1)
+	assert torch.allclose(res_no_mask_keepdim.squeeze(), t.mean(dim = (1, 2)))
+
+def test_exclusive_cumsum() -> None:
+	t = tensor([1., 2., 3., 4.])
+	assert torch.allclose(exclusive_cumsum(t), tensor([0., 1., 3., 6.]))
+
+	t = tensor([[1., 2.], [3., 4.]])
+	assert torch.allclose(exclusive_cumsum(t, dim = 0), tensor([[0., 0.], [1., 2.]]))
+	assert torch.allclose(exclusive_cumsum(t, dim = 1), tensor([[0., 1.], [0., 3.]]))
 
 def test_slice_at_dim() -> None:
 	t = torch.randn(3, 4, 5)
