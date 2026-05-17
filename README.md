@@ -5,7 +5,7 @@ Typed tensor-shaping, masking, padding, device-routing, lightweight `nn.Module` 
 [![pip install torch-einops-kit](https://img.shields.io/badge/pip_install-torch--einops--kit-gray.svg?labelColor=blue)](https://pypi.org/project/torch-einops-kit/)
 [![uv add torch-einops-kit](https://img.shields.io/badge/uv_add-torch--einops--kit-gray.svg?labelColor=blue)](https://pypi.org/project/torch-einops-kit/)
 
-This repository is a superset of [`lucidrains/torch-einops-utils`](https://github.com/lucidrains/torch-einops-utils). The upstream repository is a compact collection of small utilities that show up repeatedly in lucidrains model repositories. `torch_einops_kit` keeps that role. The main difference is emphasis. This fork adds roughly 6000 lines of tests, typing, and docstrings so the utility layer is easier to trust, easier to search, and easier to apply correctly.
+This repository is a superset of [`lucidrains/torch-einops-utils`](https://github.com/lucidrains/torch-einops-utils). The upstream repository is a compact collection of small utilities that show up repeatedly in lucidrains model repositories. `torch_einops_kit` keeps that role. The main difference is emphasis. This fork adds roughly 6000 lines of tests, typing, and docstrings, optimizes some of the original utility functions, and expands the original test suite from about 30 tests to roughly 1230 tests total so the utility layer is easier to trust, easier to search, and easier to apply correctly.
 
 `torch_einops_kit` is most useful when combined with other lucidrains repositories. Repositories such as [`dreamer4`](https://github.com/lucidrains/dreamer4), [`metacontroller`](https://github.com/lucidrains/metacontroller), [`mimic-video`](https://github.com/lucidrains/mimic-video), [`pi-zero-pytorch`](https://github.com/lucidrains/pi-zero-pytorch), [`sdft-pytorch`](https://github.com/lucidrains/sdft-pytorch), and [`locoformer`](https://github.com/lucidrains/locoformer) repeatedly need operations such as `align_dims_left`, `shape_with_replace`, `lens_to_mask`, `pad_sequence`, `safe_cat`, and `pack_with_inverse`. This package centralizes those operations in one typed import surface instead of re-implementing the same tensor utility layer in each model repository.
 
@@ -22,7 +22,6 @@ Use `torch_einops_kit` when you want strict typing, a `py.typed` marker, focused
 - Root package exports: helper functions, slicing helpers, rank-alignment helpers, mask helpers, safe concatenation helpers, padding helpers, normalization helpers, and PyTree / `einops` helpers.
 - Submodules with dedicated imports: `torch_einops_kit.device`, `torch_einops_kit.einops`, `torch_einops_kit.nn`, `torch_einops_kit.save_load`, and `torch_einops_kit.scaleValues`.
 - Typing status: the package ships a `py.typed` marker and the repository uses strict type checking.
-- Best fit: lucidrains-style model repositories that work with variable-length tensors, `einops` patterns, optional intermediate tensors, and nested `torch.nn.Module` graphs.
 
 ## Installation
 
@@ -48,14 +47,20 @@ from torch_einops_kit import (
     and_masks,
     broadcast_cat,
     lens_to_mask,
+    mask_after,
+    mask_before,
     maybe,
     once,
     or_masks,
-    pad_sequence_and_cat,
     pad_sequence,
+    pad_sequence_and_cat,
+    reverse_cumsum,
     safe_cat,
     safe_stack,
     shape_with_replace,
+    shift,
+    shift_left,
+    shift_right,
     slice_at_dim,
     tree_flatten_with_inverse,
     tree_map_tensor,
@@ -110,6 +115,7 @@ from torch_einops_kit.scaleValues import (
     l2norm,
     RMSNorm,
     masked_mean,
+    reverse_cumsum,
 )
 ```
 
@@ -228,12 +234,14 @@ These functions change shape by inserting singleton dimensions. These functions 
 
 ### Mask helpers
 
-| Name                               | Contract                                                                                                                                             |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `lens_to_mask(lens, max_len=None)` | Converts integer length values to a boolean mask with shape `(*lens.shape, max_len)`. Position `i` in the final axis is `True` when `i < lens[...]`. |
-| `reduce_masks(masks, op)`          | Filters out `None` values, then reduces the remaining masks left-to-right with `op`. Returns `None` when no non-`None` masks remain.                 |
-| `and_masks(masks)`                 | Equivalent to `reduce_masks(masks, torch.logical_and)`. Returns `None` when no active mask remains.                                                  |
-| `or_masks(masks)`                  | Equivalent to `reduce_masks(masks, torch.logical_or)`. Returns `None` when no active mask remains.                                                   |
+| Name                                            | Contract                                                                                                                                                                                                                                                                                              |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lens_to_mask(lens, max_len=None)`              | Converts integer length values to a boolean mask with shape `(*lens.shape, max_len)`. Position `i` in the final axis is `True` when `i < lens[...]`.                                                                                                                                                  |
+| `mask_after(t, value, dim=-1, inclusive=True)`  | Returns a boolean mask that stays `True` until the first occurrence of `value` along `dim`. When `inclusive=True`, the matching position remains `True`; when `inclusive=False`, it becomes `False`. If `value` never appears in a slice, the whole slice remains `True`.                             |
+| `mask_before(t, value, dim=-1, inclusive=True)` | Returns a boolean mask that stays `True` from the last occurrence of `value` through the end of each slice along `dim`. When `inclusive=True`, the matching position remains `True`; when `inclusive=False`, it becomes `False`. If `value` never appears in a slice, the whole slice remains `True`. |
+| `reduce_masks(masks, op)`                       | Filters out `None` values, then reduces the remaining masks left-to-right with `op`. Returns `None` when no non-`None` masks remain.                                                                                                                                                                  |
+| `and_masks(masks)`                              | Equivalent to `reduce_masks(masks, torch.logical_and)`. Returns `None` when no active mask remains.                                                                                                                                                                                                   |
+| `or_masks(masks)`                               | Equivalent to `reduce_masks(masks, torch.logical_or)`. Returns `None` when no active mask remains.                                                                                                                                                                                                    |
 
 ### Concatenation and stacking helpers
 
@@ -256,6 +264,9 @@ These functions add numeric padding values along an existing tensor dimension.
 | `pad_right_at_dim_to(t, length, dim=-1, value=0.0)`                       | Ensures that `t.shape[dim] >= length` by right-padding when needed. Returns `t` unchanged when the target length is already satisfied.                                                                                                   |
 | `pad_sequence(tensors, ...)`                                              | Pads every tensor in `tensors` to the maximum length along `dim`. The function can return a stacked tensor or a list of padded tensors. The function can also return original lengths or padding widths. Returns `None` for empty input. |
 | `pad_sequence_and_cat(tensors, dim_cat=0, dim=-1, value=0.0, left=False)` | Equivalent to `pad_sequence(..., return_stacked=False)` followed by `torch.cat(..., dim=dim_cat)`. Returns `None` for empty input.                                                                                                       |
+| `shift(t, amount=1, dim=-1, pad_value=0.0)`                               | Shifts tensor values along `dim` while keeping the shape unchanged. Positive `amount` shifts toward larger indices, negative `amount` shifts toward smaller indices, and vacated positions are filled with `pad_value`.                  |
+| `shift_left(t, amount=1, dim=-1, pad_value=0.0)`                          | Equivalent to `shift(t, -amount, ...)`. Moves values toward smaller indices and fills the opened positions at the end of `dim` with `pad_value`.                                                                                         |
+| `shift_right(t, amount=1, dim=-1, pad_value=0.0)`                         | Equivalent to `shift(t, amount, ...)`. Moves values toward larger indices and fills the opened positions at the beginning of `dim` with `pad_value`.                                                                                     |
 
 #### `pad_sequence` return modes
 
@@ -279,13 +290,14 @@ When `pad_lens=True` and `return_lens=True`, the second tensor contains padding 
 
 ## `scaleValues` submodule reference
 
-The `torch_einops_kit.scaleValues` submodule contains exclusive prefix sums, vector normalization, masked mean computation, and the `RMSNorm` layer.
+The `torch_einops_kit.scaleValues` submodule contains exclusive and reverse cumulative sums, vector normalization, masked mean computation, and the `RMSNorm` layer.
 
 | Name                                            | Contract                                                                                                                                                                                                                                                                                       |
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `exclusive_cumsum(t, dim=-1)`                   | Computes the exclusive prefix sum of `t` along `dim`. Each output position receives the sum of all elements that strictly precede it along `dim`. The element at index zero is always zero.                                                                                                    |
 | `l2norm(t)`                                     | Normalizes each vector in `t` to unit length along the last dimension. Delegates to `torch.nn.functional.normalize` with `p=2` and `dim=-1`.                                                                                                                                                   |
 | `masked_mean(t, mask=None, dim=None, eps=1e-5)` | Computes a masked mean. When `mask is None`, the function falls back to `t.mean(...)`. When no masked position is selected and `dim is None`, the function returns zero by summing over the empty selection. When `mask.ndim < t.ndim`, the function right-pads mask rank before broadcasting. |
+| `reverse_cumsum(t, dim=-1, keepdim=True)`       | Computes the reverse cumulative sum of `t` along `dim`, so each output position receives the sum of the current element and all later elements along that dimension. With `keepdim=True`, the summed dimension is retained before the total is broadcast back across `t`.                      |
 | `RMSNorm(dim)`                                  | `torch.nn.Module` that normalizes the last feature axis to unit length, multiplies by `√dim`, and applies a learned per-feature `gamma` parameter. Use as a pre-normalization layer before attention, feedforward, or linear projection sublayers in transformer-style modules.                |
 
 ## `einops` submodule reference
@@ -393,7 +405,7 @@ This repository is not a repackaged mirror of upstream. This repository makes a 
 
 - Upstream is intentionally compact.
 - This fork splits the implementation across focused modules such as `_helpers.py`, `_padding.py`, `device.py`, `nn.py`, and `save_load.py` while still re-exporting most tensor helpers from the package root.
-- This fork adds strict typing, a `py.typed` marker, extensive tests, and detailed docstrings.
+- This fork adds strict typing, a `py.typed` marker, extensive tests, detailed docstrings, some function optimizations, and roughly 1200 additional tests beyond the original 30-test suite.
 - This fork is best treated as a typed, documented branch of the same utility idea rather than a literal import-path-compatible drop-in replacement.
 
 ## Repository layout
@@ -402,7 +414,7 @@ This repository is not a repackaged mirror of upstream. This repository makes a 
 - `src/torch_einops_kit/device.py` — device inference and input-routing decorators.
 - `src/torch_einops_kit/nn.py` — lightweight `torch.nn.Module` adapters and a `Sequential` constructor that ignores `None` modules.
 - `src/torch_einops_kit/save_load.py` — checkpoint save / load decorator and nested reconstruction helpers.
-- `src/torch_einops_kit/scaleValues.py` — vector normalization, masked mean, and the `RMSNorm` layer.
+- `src/torch_einops_kit/scaleValues.py` — exclusive and reverse cumulative sums, vector normalization, masked mean, and the `RMSNorm` layer.
 - `tests/` — regression tests and usage examples for helpers, masks, padding, device routing, and checkpoint reconstruction.
 
 ## Development

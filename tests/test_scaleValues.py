@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from torch import Tensor
-from torch_einops_kit.scaleValues import exclusive_cumsum, l2norm, masked_mean, RMSNorm
+from torch_einops_kit.scaleValues import exclusive_cumsum, l2norm, masked_mean, reverse_cumsum, RMSNorm
 import pytest
 import torch
 
@@ -26,6 +26,30 @@ def test_exclusive_cumsum(scale_values_tensor: Tensor, reductionDim: int, scale_
 	)
 	assert torch.equal(resultTensor, expectedTensor), (
 		f'exclusive_cumsum returned {resultTensor}, expected {expectedTensor} for input {inputTensor} and {reductionDim=}.'
+	)
+
+@pytest.mark.parametrize(
+	('scale_values_tensor', 'reductionDim', 'keepdim', 'scale_values_expected_tensor'),
+	[
+		pytest.param('rank-1-primes-a', -1, True, 'rank-1-primes-a-reverse-trailing-keepdim', id='rank-1-trailing-keepdim'),
+		pytest.param('rank-1-primes-b', 0, False, 'rank-1-primes-b-reverse-leading-no-keepdim', id='rank-1-leading-no-keepdim'),
+		pytest.param('rank-2-primes-a', -1, True, 'rank-2-primes-a-reverse-trailing-keepdim', id='rank-2-trailing-keepdim'),
+		pytest.param('rank-2-primes-b', 0, False, 'rank-2-primes-b-reverse-leading-no-keepdim', id='rank-2-leading-no-keepdim'),
+	],
+	indirect=['scale_values_tensor', 'scale_values_expected_tensor'],
+)
+def test_reverse_cumsum(scale_values_tensor: Tensor, reductionDim: int, keepdim: bool, scale_values_expected_tensor: Tensor) -> None:
+	inputTensor = scale_values_tensor
+	expectedTensor = scale_values_expected_tensor
+	resultTensor = reverse_cumsum(inputTensor, dim=reductionDim, keepdim=keepdim)
+
+	assert resultTensor.shape == expectedTensor.shape, (
+		f'reverse_cumsum returned shape {tuple(resultTensor.shape)}, expected {tuple(expectedTensor.shape)} '
+		f'for input shape {tuple(inputTensor.shape)}, {reductionDim=}, and {keepdim=}.'
+	)
+	assert torch.equal(resultTensor, expectedTensor), (
+		f'reverse_cumsum returned {resultTensor}, expected {expectedTensor} '
+		f'for input {inputTensor}, {reductionDim=}, and {keepdim=}.'
 	)
 
 @pytest.mark.parametrize('tolerance', [pytest.param(1e-5, id='tolerance-1e-5')])

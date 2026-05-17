@@ -518,6 +518,114 @@ def pad_sequence_and_cat(tensors: Sequence[Tensor]=(), *, dim_cat: int = 0, dim:
 		return cat(padded, dim=dim_cat)
 	return padded
 
+def shift(t: Tensor, amount: int = 1, dim: int = -1, pad_value: float = 0.) -> Tensor:
+	"""Shift values in `t` along `dim` while keeping the shape of `t` unchanged.
+
+	You can use `shift` to move values in `t` along `dim` and fill the vacated positions with
+	`pad_value`. `shift` preserves the shape of `t`. A positive `amount` moves values toward larger
+	indices along `dim`. A negative `amount` moves values toward smaller indices along `dim`. `shift`
+	delegates to `pad_at_dim` [1] with symmetric padding and trimming.
+
+	Parameters
+	----------
+	t : Tensor
+		The input `Tensor` to shift.
+	amount : int = 1
+		The number of positions to shift along `dim`. Positive values shift toward larger indices.
+		Negative values shift toward smaller indices. Zero returns a `Tensor` equal to `t`.
+	dim : int = -1
+		The dimension along which to shift `t`.
+	pad_value : float = 0.
+		The scalar value inserted into positions vacated by the shift.
+
+	Returns
+	-------
+	shifted : Tensor
+		A `Tensor` with the same shape as `t` after shifting values along `dim` and filling vacated
+		positions with `pad_value`.
+
+	See Also
+	--------
+	shift_left : Shift values toward smaller indices along one dimension.
+	shift_right : Shift values toward larger indices along one dimension.
+	pad_at_dim : Pad one dimension while trimming the opposite side.
+
+	References
+	----------
+	[1] torch_einops_kit.pad_at_dim
+	"""
+	return pad_at_dim(t, (amount, -amount), dim = dim, value = pad_value)
+
+def shift_left(t: Tensor, amount: int = 1, dim: int = -1, pad_value: float = 0.) -> Tensor:
+	"""Shift values in `t` toward smaller indices along `dim`.
+
+	You can use `shift_left` to move values in `t` toward smaller indices along `dim` while keeping
+	the shape of `t` unchanged. `shift_left` fills positions opened at the end of `dim` with
+	`pad_value`. `shift_left` calls `shift` [1] with a negated `amount`.
+
+	Parameters
+	----------
+	t : Tensor
+		The input `Tensor` to shift.
+	amount : int = 1
+		The number of positions to shift toward smaller indices along `dim`.
+	dim : int = -1
+		The dimension along which to shift `t`.
+	pad_value : float = 0.
+		The scalar value inserted into positions vacated by the shift.
+
+	Returns
+	-------
+	shifted : Tensor
+		A `Tensor` with the same shape as `t` after shifting values toward smaller indices along `dim`
+		and filling vacated positions with `pad_value`.
+
+	See Also
+	--------
+	shift : Shift values in either direction along one dimension.
+	shift_right : Shift values toward larger indices along one dimension.
+
+	References
+	----------
+	[1] torch_einops_kit.shift
+	"""
+	return shift(t, -amount, dim = dim, pad_value = pad_value)
+
+def shift_right(t: Tensor, amount: int = 1, dim: int = -1, pad_value: float = 0.) -> Tensor:
+	"""Shift values in `t` toward larger indices along `dim`.
+
+	You can use `shift_right` to move values in `t` toward larger indices along `dim` while keeping
+	the shape of `t` unchanged. `shift_right` fills positions opened at the beginning of `dim` with
+	`pad_value`. `shift_right` calls `shift` [1] with a positive `amount`.
+
+	Parameters
+	----------
+	t : Tensor
+		The input `Tensor` to shift.
+	amount : int = 1
+		The number of positions to shift toward larger indices along `dim`.
+	dim : int = -1
+		The dimension along which to shift `t`.
+	pad_value : float = 0.
+		The scalar value inserted into positions vacated by the shift.
+
+	Returns
+	-------
+	shifted : Tensor
+		A `Tensor` with the same shape as `t` after shifting values toward larger indices along `dim`
+		and filling vacated positions with `pad_value`.
+
+	See Also
+	--------
+	shift : Shift values in either direction along one dimension.
+	shift_left : Shift values toward smaller indices along one dimension.
+
+	References
+	----------
+	[1] torch_einops_kit.shift
+	"""
+	return shift(t, amount, dim = dim, pad_value = pad_value)
+
 """
 Some of the logic in this module may be protected by the following.
 

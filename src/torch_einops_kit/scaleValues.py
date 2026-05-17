@@ -1,8 +1,10 @@
-"""Provide exclusive prefix sums, vector normalization, masked mean computation, and learned RMS normalization.
+"""Provide exclusive and reverse cumulative sums, vector normalization, masked mean computation, and learned RMS normalization.
 
-You can use this module to compute exclusive prefix sums of tensors, normalize feature vectors
-to unit length, compute masked mean reductions over selected tensor positions, and apply learned
-root-mean-square normalization to transformer and neural network feature channels.
+You can use this module to compute exclusive prefix sums of tensors, compute reverse cumulative
+sums that accumulate values from the current position to the end of a dimension, normalize
+feature vectors to unit length, compute masked mean reductions over selected tensor positions,
+and apply learned root-mean-square normalization to transformer and neural network feature
+channels.
 
 Contents
 --------
@@ -13,6 +15,8 @@ Functions
 		Normalize `Tensor` vectors to unit length along the last dimension.
 	masked_mean
 		Compute the mean of a tensor over positions selected by a boolean mask.
+	reverse_cumsum
+		Compute the reverse cumulative sum of a `Tensor` along a dimension.
 
 Classes
 	RMSNorm
@@ -30,29 +34,29 @@ import torch.nn.functional as F
 def exclusive_cumsum(t: Tensor, dim: int = -1) -> Tensor:
 	"""Compute the exclusive prefix sum of `Tensor` `t` along its dimension `dim`.
 
-	You can use `exclusive_cumsum` to produce a shifted cumulative sum where each output
-	position accumulates only the elements that strictly precede it along `dim`. The element
-	at index zero is always zero. This operation is useful for converting absolute segment
-	lengths into starting offsets.
+	You can use `exclusive_cumsum` to produce a shifted cumulative sum where each output position
+	accumulates only the elements that strictly precede it along `dim`. The element at index zero is
+	always zero. This operation is useful for converting absolute segment lengths into starting
+	offsets.
 
 	Parameters
 	----------
 	t : Tensor
 		Input `Tensor` to reduce.
 	dim : int = -1
-		Dimension along which to compute the exclusive prefix sum. Negative values index
-		from the last axis.
+		Dimension along which to compute the exclusive prefix sum. Negative values index from the last
+		axis.
 
 	Returns
 	-------
 	exclusivePrefixSum : Tensor
-		`Tensor` with the same shape as `t` where `exclusivePrefixSum[..., i, ...]` equals
-		the sum of all elements of `t` with index strictly less than `i` along `dim`.
+		`Tensor` with the same shape as `t` where `exclusivePrefixSum[..., i, ...]` equals the sum of
+		all elements of `t` with index strictly less than `i` along `dim`.
 
 	Mathematical Basis
 	------------------
-	Let t = [t₀, t₁, ..., tₙ₋₁] be the elements of `t` along `dim`. The exclusive prefix
-	sum S is defined element-wise as:
+	Let t = [t₀, t₁, ..., tₙ₋₁] be the elements of `t` along `dim`. The exclusive prefix sum S is
+	defined element-wise as:
 
 		S[i] = Σⱼ₌₀^(i−1) tⱼ,  with S[0] = 0.
 
@@ -113,10 +117,10 @@ def masked_mean(t: Tensor, mask: Tensor | None = None, dim: torch.Size | list[in
 
 	You can use this function to average only the elements of `t` where `mask` is `True`, ignoring
 	masked-out positions. When `mask` is `None`, the function falls back to the standard
-	`torch.Tensor.mean` [1]. When `mask` has fewer dimensions than `t`, the function right-pads
-	`mask` with singleton dimensions using `pad_right_ndim` [2] before broadcasting. When all
-	positions in `mask` are `False` and `dim` is `None`, the function returns zero by summing over
-	the empty selection.
+	`torch.Tensor.mean` [1]. When `mask` has fewer dimensions than `t`, the function right-pads `mask`
+	with singleton dimensions using `pad_right_ndim` [2] before broadcasting. When all positions in
+	`mask` are `False` and `dim` is `None`, the function returns zero by summing over the empty
+	selection.
 
 	Parameters
 	----------
@@ -139,50 +143,44 @@ def masked_mean(t: Tensor, mask: Tensor | None = None, dim: torch.Size | list[in
 	Returns
 	-------
 	result : Tensor
-		The masked mean of `t`. The shape matches `t` with the reduced dimension removed when `dim`
-		is specified, or a scalar tensor when `dim` is `None`.
+		The masked mean of `t`. The shape matches `t` with the reduced dimension removed when `dim` is
+		specified, or a scalar tensor when `dim` is `None`.
 
 	See Also
 	--------
-	pad_right_ndim : Pad singleton dimensions on the right of a tensor to reach a target number of dimensions.
+	pad_right_ndim : Pad singleton dimensions on the right of a tensor to reach a target number of
+	dimensions.
 
 	Examples
 	--------
 	Compute the mean of all elements with no mask [3]:
 
 	```python
-		from torch import tensor
-		from torch_einops_kit import masked_mean
+		from torch import tensor from torch_einops_kit import masked_mean
 
-		t = tensor([1.0, 2.0, 3.0, 4.0])
-		result = masked_mean(t)
-		# result == tensor(2.5)
+		t = tensor([1.0, 2.0, 3.0, 4.0]) result = masked_mean(t) # result == tensor(2.5)
 	```
 
 	Select only the `True` positions using a boolean mask [3]:
 
 	```python
-		mask = tensor([True, False, True, False])
-		result = masked_mean(t, mask=mask)
-		# result == tensor(2.0)
+		mask = tensor([True, False, True, False]) result = masked_mean(t, mask=mask) # result ==
+		tensor(2.0)
 	```
 
 	Average along a specific dimension [3]:
 
 	```python
-		t = tensor([[1.0, 2.0], [3.0, 4.0]])
-		mask = tensor([[True, False], [True, True]])
-		result = masked_mean(t, mask=mask, dim=1)
-		# result == tensor([1.0, 3.5])
+		t = tensor([[1.0, 2.0], [3.0, 4.0]]) mask = tensor([[True, False], [True, True]]) result =
+		masked_mean(t, mask=mask, dim=1) # result == tensor([1.0, 3.5])
 	```
 
 	Compute the sequence-level mean of transformer activations with `keepdim=True` to preserve the
 	sequence dimension for broadcasting, used in the mean-variance split residual update [4][5]:
 
 	```python
-		mean_x = masked_mean(x, mask=mask, dim=-2, keepdim=True)
-		mean_residual = masked_mean(residual, mask=mask, dim=-2, keepdim=True)
-		centered_x = x - mean_x
+		mean_x = masked_mean(x, mask=mask, dim=-2, keepdim=True) mean_residual = masked_mean(residual,
+		mask=mask, dim=-2, keepdim=True) centered_x = x - mean_x
 	```
 
 	References
@@ -194,8 +192,7 @@ def masked_mean(t: Tensor, mask: Tensor | None = None, dim: torch.Size | list[in
 	[3] tests.test_utils.test_masked_mean
 
 	[4] Lu, P. (2026). Mean Mode Screaming: Mean-Variance Split Residuals for 1000-Layer Diffusion
-		Transformers. arXiv:2605.06169.
-		https://arxiv.org/abs/2605.06169
+		Transformers. arXiv:2605.06169. https://arxiv.org/abs/2605.06169
 	[5] x_transformers.x_transformers.MVSplitResidualUpdate.forward - lucidrains/x-transformers
 		https://github.com/lucidrains/x-transformers
 
@@ -210,13 +207,64 @@ def masked_mean(t: Tensor, mask: Tensor | None = None, dim: torch.Size | list[in
 
 	return num / den.clamp(min=eps)
 
+def reverse_cumsum(t: Tensor, dim: int = -1, *, keepdim: bool = True) -> Tensor:
+	"""Compute the reverse cumulative sum of input `Tensor` `t` along dimension `dim`.
+
+	You can use `reverse_cumsum` to accumulate values from the current position to the end of `t`
+	along `dim`. `reverse_cumsum` complements `exclusive_cumsum` [1] and is useful when each position
+	needs the sum of the value at that position and all later values along `dim`.
+
+	PyTorch
+	-------
+	broadcasting of `keepdim` : behavior
+		`reverse_cumsum` computes `t.sum(dim=dim, keepdim=keepdim)` [2], subtracts `t.cumsum(dim=dim)`
+		[3], and adds `t`. With `keepdim=True`, the total sum keeps the reduced dimension so the total
+		sum broadcasts across `t` for any valid `dim`. With `keepdim=False`, the total sum omits the
+		reduced dimension and the call succeeds only when PyTorch broadcasting semantics [4] can align
+		the reduced result with `t`.
+
+	Parameters
+	----------
+	t : Tensor
+		Input `Tensor` to reduce.
+	dim : int = -1
+		Dimension along which to compute the reverse cumulative sum. Negative values index from the
+		last axis.
+	keepdim : bool = True
+		Whether `t.sum(dim=dim, keepdim=keepdim)` keeps the reduced dimension before the total sum is
+		broadcast back across `t`.
+
+	Returns
+	-------
+	reverseCumulativeSum : Tensor
+		`Tensor` where `reverseCumulativeSum[..., i, ...]` equals the sum of all elements of `t` with
+		index greater than or equal to `i` along `dim`. When the computation broadcasts successfully,
+		`reverseCumulativeSum` has the same shape as `t`.
+
+	See Also
+	--------
+	exclusive_cumsum : Compute the exclusive prefix sum of a `Tensor` along a dimension.
+
+	References
+	----------
+	[1] torch_einops_kit.exclusive_cumsum
+
+	[2] torch.Tensor.sum - PyTorch documentation
+		https://pytorch.org/docs/stable/generated/torch.Tensor.sum.html
+	[3] torch.Tensor.cumsum - PyTorch documentation
+		https://pytorch.org/docs/stable/generated/torch.Tensor.cumsum.html
+	[4] Broadcasting semantics - PyTorch documentation
+		https://pytorch.org/docs/stable/notes/broadcasting.html
+	"""
+	return t.sum(dim = dim, keepdim = keepdim) - t.cumsum(dim = dim) + t
+
 class RMSNorm(Module):
 	"""Normalize feature vectors with root-mean-square scaling and a learned rescaling parameter.
 
 	You can use `RMSNorm` as a pre-normalization layer before attention, feedforward, or linear
 	projection sublayers in transformer-style modules. `RMSNorm` normalizes each feature vector along
-	the last axis to unit length, scales the result by `√dim` to restore the original magnitude
-	range, and then applies the learned per-feature `gamma` parameter.
+	the last axis to unit length, scales the result by `√dim` to restore the original magnitude range,
+	and then applies the learned per-feature `gamma` parameter.
 
 	The normalization is mathematically equivalent to dividing each vector by its root mean square
 	[1]. This formulation omits the mean-centering step of `torch.nn.LayerNorm` [2], which the
@@ -247,24 +295,26 @@ class RMSNorm(Module):
 	Apply `RMSNorm` as a pre-norm before a linear projection, following the lucidrains BS-RoFormer
 	pattern [4] [5]:
 
-		```python from torch import nn from torch_einops_kit.scaleValues import RMSNorm
+	```python
+		from torch import nn from torch_einops_kit.scaleValues import RMSNorm
 
 		dim = 128 pre_norm_proj = nn.Sequential(
 			RMSNorm(dim), nn.Linear(dim, dim * 4),
 		)
-		```
+	```
 
 	Store a `RMSNorm` instance on an `Attention` module and call it in `forward`, following the
 	lucidrains BS-RoFormer pattern [4] [5]:
 
-		```python class Attention(nn.Module):
+	```python
+		class Attention(nn.Module):
 			def __init__(self, dim: int) -> None:
 				super().__init__() self.norm = RMSNorm(dim) self.to_qkv = nn.Linear(dim, dim * 3,
 				bias=False)
 
 			def forward(self, x):
 				x = self.norm(x) # ... query, key, value projection follows
-		```
+	```
 
 	References
 	----------
@@ -296,8 +346,8 @@ class RMSNorm(Module):
 		Parameters
 		----------
 		x : Tensor
-			Input `Tensor` whose last axis stores feature channels. `x` may have any number of
-			leading batch or sequence dimensions.
+			Input `Tensor` whose last axis stores feature channels. `x` may have any number of leading
+			batch or sequence dimensions.
 
 		Returns
 		-------

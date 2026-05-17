@@ -2,13 +2,15 @@ from __future__ import annotations
 
 from torch import Tensor
 from torch_einops_kit import (
-	pad_at_dim, pad_left_at_dim, pad_left_at_dim_to, pad_right_at_dim, pad_right_at_dim_to, pad_sequence, pad_sequence_and_cat)
+	pad_at_dim, pad_left_at_dim, pad_left_at_dim_to, pad_right_at_dim, pad_right_at_dim_to, pad_sequence, pad_sequence_and_cat, shift,
+	shift_left, shift_right)
 import pytest
 import torch
 
 LEFT_PAD_WIDTH = 2
 RIGHT_PAD_WIDTH = 3
 LENGTH_STEP = 3
+SHIFT_AMOUNT = 2
 ROW_COUNT_TWO = 2
 WIDTH_THREE = 3
 
@@ -24,6 +26,12 @@ PAD_FILL_FLOAT_97 = 97.0
 PAD_FILL_INT_97 = 97
 PAD_FILL_FLOAT_101 = 101.0
 PAD_FILL_FLOAT_103 = 103.0
+PAD_FILL_FLOAT_107 = 107.0
+PAD_FILL_INT_107 = 107
+PAD_FILL_FLOAT_109 = 109.0
+PAD_FILL_INT_109 = 109
+PAD_FILL_FLOAT_113 = 113.0
+PAD_FILL_INT_113 = 113
 
 def _dimension_inputs_for_tensor(tensor_value: Tensor) -> list[int]:
 	dimension_inputs = [-1, 0]
@@ -221,6 +229,69 @@ def test_pad_right_at_dim_to(t: Tensor, length_step: int) -> None:
 			assert torch.all(right_padding_slice == fill_value), (
 				f'pad_right_at_dim_to right padding values are incorrect for {dimension_index=}, {target_length=}, and {tuple(t.shape)=}.'
 			)
+
+@pytest.mark.parametrize(
+	'shift_amount',
+	[
+		pytest.param(SHIFT_AMOUNT, id='shift-right-by-two'),
+		pytest.param(-SHIFT_AMOUNT, id='shift-left-by-two'),
+	],
+)
+def test_shift(t: Tensor, shift_amount: int) -> None:
+	fill_value = _fill_value_for_tensor(t, float_fill_value=PAD_FILL_FLOAT_107, int_fill_value=PAD_FILL_INT_107)
+
+	for dimension_index in _dimension_inputs_for_tensor(t):
+		result = shift(t, shift_amount, dim=dimension_index, pad_value=float(fill_value))
+		expected = pad_at_dim(t, (shift_amount, -shift_amount), dim=dimension_index, value=float(fill_value))
+
+		assert tuple(result.shape) == tuple(t.shape), (
+			f'shift returned shape {tuple(result.shape)}, expected {tuple(t.shape)} for {shift_amount=}, {dimension_index=}, '
+			f'and {tuple(t.shape)=}.'
+		)
+		assert result.dtype == t.dtype, (
+			f'shift returned dtype {result.dtype}, expected {t.dtype} for {shift_amount=}, {dimension_index=}, and {tuple(t.shape)=}.'
+		)
+		assert torch.equal(result, expected), (
+			f'shift returned incorrect values for {shift_amount=}, {dimension_index=}, and {tuple(t.shape)=}.'
+		)
+
+@pytest.mark.parametrize('shift_amount', [pytest.param(SHIFT_AMOUNT, id='shift-left-by-two')])
+def test_shift_left(t: Tensor, shift_amount: int) -> None:
+	fill_value = _fill_value_for_tensor(t, float_fill_value=PAD_FILL_FLOAT_109, int_fill_value=PAD_FILL_INT_109)
+
+	for dimension_index in _dimension_inputs_for_tensor(t):
+		result = shift_left(t, shift_amount, dim=dimension_index, pad_value=float(fill_value))
+		expected = pad_at_dim(t, (-shift_amount, shift_amount), dim=dimension_index, value=float(fill_value))
+
+		assert tuple(result.shape) == tuple(t.shape), (
+			f'shift_left returned shape {tuple(result.shape)}, expected {tuple(t.shape)} for {shift_amount=}, {dimension_index=}, '
+			f'and {tuple(t.shape)=}.'
+		)
+		assert result.dtype == t.dtype, (
+			f'shift_left returned dtype {result.dtype}, expected {t.dtype} for {shift_amount=}, {dimension_index=}, and {tuple(t.shape)=}.'
+		)
+		assert torch.equal(result, expected), (
+			f'shift_left returned incorrect values for {shift_amount=}, {dimension_index=}, and {tuple(t.shape)=}.'
+		)
+
+@pytest.mark.parametrize('shift_amount', [pytest.param(SHIFT_AMOUNT, id='shift-right-by-two')])
+def test_shift_right(t: Tensor, shift_amount: int) -> None:
+	fill_value = _fill_value_for_tensor(t, float_fill_value=PAD_FILL_FLOAT_113, int_fill_value=PAD_FILL_INT_113)
+
+	for dimension_index in _dimension_inputs_for_tensor(t):
+		result = shift_right(t, shift_amount, dim=dimension_index, pad_value=float(fill_value))
+		expected = pad_at_dim(t, (shift_amount, -shift_amount), dim=dimension_index, value=float(fill_value))
+
+		assert tuple(result.shape) == tuple(t.shape), (
+			f'shift_right returned shape {tuple(result.shape)}, expected {tuple(t.shape)} for {shift_amount=}, {dimension_index=}, '
+			f'and {tuple(t.shape)=}.'
+		)
+		assert result.dtype == t.dtype, (
+			f'shift_right returned dtype {result.dtype}, expected {t.dtype} for {shift_amount=}, {dimension_index=}, and {tuple(t.shape)=}.'
+		)
+		assert torch.equal(result, expected), (
+			f'shift_right returned incorrect values for {shift_amount=}, {dimension_index=}, and {tuple(t.shape)=}.'
+		)
 
 def test_pad_sequence(sequence_tensors: list[Tensor], empty_tensor_sequence: list[Tensor]) -> None:
 	list_tensors = sequence_tensors

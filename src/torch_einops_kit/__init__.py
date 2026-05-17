@@ -1,8 +1,8 @@
 """Access PyTorch tensor-shaping, masking, padding, `nn.Module` adaptation, and checkpoint utilities.
 
 You can use this package for optional-value handling, tensor slicing, rank alignment, mask
-construction, safe concatenation, sequence padding, PyTree traversal, lightweight `nn.Module`
-adapters, and `einops` pattern tensor packing.
+construction from lengths or delimiter values, safe concatenation, sequence padding and shifting,
+PyTree traversal, lightweight `nn.Module` adapters, and `einops` pattern tensor packing.
 
 Helpers
 -------
@@ -59,6 +59,10 @@ and_masks
 	Combine boolean masks with element-wise logical AND.
 lens_to_mask
 	Convert length values into boolean masks.
+mask_after
+	Keep positions through the first delimiter value along a dimension.
+mask_before
+	Keep positions from the last delimiter value to the end of a dimension.
 or_masks
 	Combine boolean masks with element-wise logical OR.
 reduce_masks
@@ -89,6 +93,12 @@ pad_sequence
 	Pad a sequence of tensors to a shared length and optionally stack them.
 pad_sequence_and_cat
 	Pad a sequence of tensors to a shared length and concatenate the padded tensors.
+shift
+	Shift tensor values along one dimension while filling vacated positions.
+shift_left
+	Shift tensor values toward smaller indices along one dimension.
+shift_right
+	Shift tensor values toward larger indices along one dimension.
 
 Utilities
 ---------
@@ -100,7 +110,8 @@ tree_map_tensor
 Modules
 -------
 device
-	Determine `torch.nn.Module` devices and decorate callables to move `Tensor` arguments automatically.
+	Determine `torch.nn.Module` devices and decorate callables to move `Tensor` arguments
+	automatically.
 einops
 	Pack and unpack `Tensor` objects with `einops` patterns and paired inverse functions.
 nn
@@ -138,17 +149,18 @@ from torch_einops_kit._dimensions import (
 	pad_right_ndim as pad_right_ndim, pad_right_ndim_to as pad_right_ndim_to)
 
 # isort: split
-from torch_einops_kit._masking import (
-	and_masks as and_masks, lens_to_mask as lens_to_mask, or_masks as or_masks, reduce_masks as reduce_masks)
-
-# isort: split
 from torch_einops_kit._cat_and_stack import broadcast_cat as broadcast_cat, safe_cat as safe_cat, safe_stack as safe_stack
 
 # isort: split
 from torch_einops_kit._padding import (
 	pad_at_dim as pad_at_dim, pad_left_at_dim as pad_left_at_dim, pad_left_at_dim_to as pad_left_at_dim_to,
 	pad_right_at_dim as pad_right_at_dim, pad_right_at_dim_to as pad_right_at_dim_to, pad_sequence as pad_sequence,
-	pad_sequence_and_cat as pad_sequence_and_cat)
+	pad_sequence_and_cat as pad_sequence_and_cat, shift as shift, shift_left as shift_left, shift_right as shift_right)
+
+# isort: split
+from torch_einops_kit._masking import (
+	and_masks as and_masks, lens_to_mask as lens_to_mask, mask_after as mask_after, mask_before as mask_before, or_masks as or_masks,
+	reduce_masks as reduce_masks)
 
 # isort: split
 from torch_einops_kit.utils import tree_flatten_with_inverse as tree_flatten_with_inverse, tree_map_tensor as tree_map_tensor
@@ -157,7 +169,7 @@ from torch_einops_kit.utils import tree_flatten_with_inverse as tree_flatten_wit
 # NOTE These imports are for backwards compatibility. Linters ought to tell users to import from the correct submodules.
 from torch_einops_kit.einops import pack_with_inverse  # pyright: ignore[reportUnusedImport]
 from torch_einops_kit.nn import Identity, Lambda, Sequential  # pyright: ignore[reportUnusedImport]
-from torch_einops_kit.scaleValues import l2norm, masked_mean  # pyright: ignore[reportUnusedImport]
+from torch_einops_kit.scaleValues import exclusive_cumsum, l2norm, masked_mean, reverse_cumsum  # pyright: ignore[reportUnusedImport]
 
 # NOTE `broadcat` is the identifier used in lucidrains packages.
 broadcat = broadcast_cat

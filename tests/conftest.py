@@ -139,6 +139,54 @@ def t(request: pytest.FixtureRequest) -> Tensor:
 def tensor_malformed_padding(request: pytest.FixtureRequest) -> tuple[Tensor, int, int]:
 	return request.param
 
+MASK_BOUNDARY_CASES: list[object] = [
+	pytest.param(
+		(
+			torch.tensor([[2, 3, 5, 7, 11], [13, 5, 17, 5, 19]]),
+			5,
+			torch.tensor([[True, True, True, False, False], [True, True, False, False, False]], dtype=torch.bool),
+			torch.tensor([[True, True, False, False, False], [True, False, False, False, False]], dtype=torch.bool),
+			torch.tensor([[False, False, True, True, True], [False, False, False, True, True]], dtype=torch.bool),
+			torch.tensor([[False, False, False, True, True], [False, False, False, False, True]], dtype=torch.bool),
+		),
+		id='delimiter-repeated',
+	),
+	pytest.param(
+		(
+			torch.tensor([[23, 29, 31, 37], [41, 43, 47, 53]]),
+			59,
+			torch.tensor([[True, True, True, True], [True, True, True, True]], dtype=torch.bool),
+			torch.tensor([[True, True, True, True], [True, True, True, True]], dtype=torch.bool),
+			torch.tensor([[True, True, True, True], [True, True, True, True]], dtype=torch.bool),
+			torch.tensor([[True, True, True, True], [True, True, True, True]], dtype=torch.bool),
+		),
+		id='delimiter-absent',
+	),
+	pytest.param(
+		(
+			torch.tensor([[5, 7, 11, 13], [17, 19, 23, 5]]),
+			5,
+			torch.tensor([[True, False, False, False], [True, True, True, True]], dtype=torch.bool),
+			torch.tensor([[False, False, False, False], [True, True, True, False]], dtype=torch.bool),
+			torch.tensor([[True, True, True, True], [False, False, False, True]], dtype=torch.bool),
+			torch.tensor([[False, True, True, True], [False, False, False, False]], dtype=torch.bool),
+		),
+		id='delimiter-edge-positions',
+	),
+]
+
+@pytest.fixture(params=MASK_BOUNDARY_CASES)
+def mask_boundary_case(request: pytest.FixtureRequest) -> tuple[Tensor, int, Tensor, Tensor, Tensor, Tensor]:
+	return request.param
+
+@pytest.fixture
+def mask_after_case(mask_boundary_case: tuple[Tensor, int, Tensor, Tensor, Tensor, Tensor]) -> tuple[Tensor, int, Tensor, Tensor]:
+	return mask_boundary_case[0], mask_boundary_case[1], mask_boundary_case[2], mask_boundary_case[3]
+
+@pytest.fixture
+def mask_before_case(mask_boundary_case: tuple[Tensor, int, Tensor, Tensor, Tensor, Tensor]) -> tuple[Tensor, int, Tensor, Tensor]:
+	return mask_boundary_case[0], mask_boundary_case[1], mask_boundary_case[4], mask_boundary_case[5]
+
 def _mask_all_true(tensor_value: Tensor) -> Tensor:
 	return torch.ones_like(tensor_value, dtype=torch.bool)
 
@@ -262,8 +310,12 @@ SCALE_VALUES_TENSORS: dict[str, Tensor] = {
 SCALE_VALUES_EXPECTED_TENSORS: dict[str, Tensor] = {
 	'rank-1-primes-a-exclusive-trailing': torch.tensor([0.0, 2.0, 5.0, 10.0]),
 	'rank-1-primes-b-exclusive-leading': torch.tensor([0.0, 11.0, 24.0]),
+	'rank-1-primes-a-reverse-trailing-keepdim': torch.tensor([17.0, 15.0, 12.0, 7.0]),
+	'rank-1-primes-b-reverse-leading-no-keepdim': torch.tensor([41.0, 30.0, 17.0]),
 	'rank-2-primes-a-exclusive-trailing': torch.tensor([[0.0, 19.0, 42.0], [0.0, 31.0, 68.0]]),
+	'rank-2-primes-a-reverse-trailing-keepdim': torch.tensor([[71.0, 52.0, 29.0], [109.0, 78.0, 41.0]]),
 	'rank-2-primes-b-exclusive-leading': torch.tensor([[0.0, 0.0, 0.0], [43.0, 47.0, 53.0]]),
+	'rank-2-primes-b-reverse-leading-no-keepdim': torch.tensor([[102.0, 108.0, 120.0], [59.0, 61.0, 67.0]]),
 }
 
 @pytest.fixture

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from torch import Tensor
-from torch_einops_kit import and_masks, lens_to_mask, or_masks, reduce_masks
+from torch_einops_kit import and_masks, lens_to_mask, mask_after, mask_before, or_masks, reduce_masks
+import pytest
 import torch
 
 def test_lens_to_mask(t: Tensor) -> None:
@@ -77,6 +78,46 @@ def test_lens_to_mask(t: Tensor) -> None:
 			assert not torch.any(cell_mask[length_value:]), (
 				f'lens_to_mask matrix cell trailing False values are incorrect for {row_index=}, {column_index=}.'
 			)
+
+@pytest.mark.parametrize('inclusive', [pytest.param(True, id='inclusive'), pytest.param(False, id='exclusive')])
+def test_mask_after(mask_after_case: tuple[Tensor, int, Tensor, Tensor], inclusive: bool) -> None:
+	tensor_value, delimiter_value, expected_inclusive_mask, expected_exclusive_mask = mask_after_case
+	expected_mask = expected_inclusive_mask if inclusive else expected_exclusive_mask
+	actual_mask = mask_after(tensor_value, delimiter_value, inclusive=inclusive)
+
+	assert torch.equal(actual_mask, expected_mask), (
+		f'mask_after returned {actual_mask}, expected {expected_mask} for {delimiter_value=} and {inclusive=}.'
+	)
+
+@pytest.mark.parametrize('inclusive', [pytest.param(True, id='inclusive'), pytest.param(False, id='exclusive')])
+def test_mask_after_dim_zero(mask_after_case: tuple[Tensor, int, Tensor, Tensor], inclusive: bool) -> None:
+	tensor_value, delimiter_value, expected_inclusive_mask, expected_exclusive_mask = mask_after_case
+	expected_mask = expected_inclusive_mask if inclusive else expected_exclusive_mask
+	actual_mask = mask_after(tensor_value.T, delimiter_value, dim=0, inclusive=inclusive)
+
+	assert torch.equal(actual_mask, expected_mask.T), (
+		f'mask_after returned {actual_mask}, expected {expected_mask.T} for transposed input, {delimiter_value=}, and {inclusive=}.'
+	)
+
+@pytest.mark.parametrize('inclusive', [pytest.param(True, id='inclusive'), pytest.param(False, id='exclusive')])
+def test_mask_before(mask_before_case: tuple[Tensor, int, Tensor, Tensor], inclusive: bool) -> None:
+	tensor_value, delimiter_value, expected_inclusive_mask, expected_exclusive_mask = mask_before_case
+	expected_mask = expected_inclusive_mask if inclusive else expected_exclusive_mask
+	actual_mask = mask_before(tensor_value, delimiter_value, inclusive=inclusive)
+
+	assert torch.equal(actual_mask, expected_mask), (
+		f'mask_before returned {actual_mask}, expected {expected_mask} for {delimiter_value=} and {inclusive=}.'
+	)
+
+@pytest.mark.parametrize('inclusive', [pytest.param(True, id='inclusive'), pytest.param(False, id='exclusive')])
+def test_mask_before_dim_zero(mask_before_case: tuple[Tensor, int, Tensor, Tensor], inclusive: bool) -> None:
+	tensor_value, delimiter_value, expected_inclusive_mask, expected_exclusive_mask = mask_before_case
+	expected_mask = expected_inclusive_mask if inclusive else expected_exclusive_mask
+	actual_mask = mask_before(tensor_value.T, delimiter_value, dim=0, inclusive=inclusive)
+
+	assert torch.equal(actual_mask, expected_mask.T), (
+		f'mask_before returned {actual_mask}, expected {expected_mask.T} for transposed input, {delimiter_value=}, and {inclusive=}.'
+	)
 
 def test_reduce_masks(sequence_tensors: list[Tensor], empty_optional_tensor_sequence: list[Tensor | None]) -> None:
 	list_tensors = sequence_tensors

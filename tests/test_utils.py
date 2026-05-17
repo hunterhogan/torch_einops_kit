@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from torch import tensor
 from torch_einops_kit import (
-	align_dims_left, and_masks, exists, lens_to_mask, maybe, or_masks, pad_at_dim, pad_left_at_dim, pad_left_at_dim_to, pad_left_ndim_to,
-	pad_ndim, pad_right_at_dim, pad_right_at_dim_to, pad_right_ndim_to, pad_sequence, pad_sequence_and_cat, safe_cat, safe_stack,
-	shape_with_replace, slice_at_dim, slice_left_at_dim, slice_right_at_dim)
+	align_dims_left, and_masks, exists, lens_to_mask, mask_after, mask_before, maybe, or_masks, pad_at_dim, pad_left_at_dim,
+	pad_left_at_dim_to, pad_left_ndim_to, pad_ndim, pad_right_at_dim, pad_right_at_dim_to, pad_right_ndim_to, pad_sequence,
+	pad_sequence_and_cat, safe_cat, safe_stack, shape_with_replace, shift_left, shift_right, slice_at_dim, slice_left_at_dim,
+	slice_right_at_dim)
 from torch_einops_kit.einops import pack_with_inverse
-from torch_einops_kit.scaleValues import exclusive_cumsum, masked_mean
+from torch_einops_kit.scaleValues import exclusive_cumsum, masked_mean, reverse_cumsum
 from torch_einops_kit.utils import tree_flatten_with_inverse, tree_map_tensor
 from typing import TYPE_CHECKING
 import torch
@@ -229,6 +230,61 @@ def test_safe_functions() -> None:
 	assert (safe_cat([t1]) == t1).all()
 	assert (safe_cat([t1, None]) == t1).all()
 	assert safe_cat([t1, t2]).shape == (4, 3)
+
+def test_mask_after_before() -> None:
+    t: torch.Tensor = tensor([[1, 2, 3, 4, 5], [1, 3, 2, 3, 5]])
+
+    assert mask_after(t, 3).tolist() == [
+        [True, True, True, False, False],
+        [True, True, False, False, False]
+    ]
+
+    assert mask_after(t, 3, inclusive = False).tolist() == [
+        [True, True, False, False, False],
+        [True, False, False, False, False]
+    ]
+
+    assert mask_before(t, 3).tolist() == [
+        [False, False, True, True, True],
+        [False, False, False, True, True]
+    ]
+
+    assert mask_before(t, 3, inclusive = False).tolist() == [
+        [False, False, False, True, True],
+        [False, False, False, False, True]
+    ]
+
+    assert mask_after(t.T, 3, dim = 0).tolist() == mask_after(t, 3).T.tolist()
+    assert mask_before(t.T, 3, dim = 0).tolist() == mask_before(t, 3).T.tolist()
+
+def test_eos_id_masking() -> None:
+    seq: torch.Tensor = tensor([
+        [1, 4, 5, 2, 0, 0],
+        [1, 6, 2, 0, 0, 0],
+        [1, 7, 8, 9, 2, 0]
+    ])
+
+    assert mask_after(seq, 2).tolist() == [
+        [True, True, True, True, False, False],
+        [True, True, True, False, False, False],
+        [True, True, True, True, True, False]
+    ]
+
+    assert mask_after(seq, 2, inclusive = False).tolist() == [
+        [True, True, True, False, False, False],
+        [True, True, False, False, False, False],
+        [True, True, True, True, False, False]
+    ]
+
+def test_shift() -> None:
+    t: torch.Tensor = tensor([1, 2, 3])
+    assert shift_right(t).tolist() == [0, 1, 2]
+    assert shift_left(t).tolist() == [2, 3, 0]
+    assert shift_right(t, pad_value = -1).tolist() == [-1, 1, 2]
+
+def test_reverse_cumsum() -> None:
+    t: torch.Tensor = tensor([1, 2, 3])
+    assert reverse_cumsum(t).tolist() == [6, 5, 3]
 
 """
 Some or all of the logic in this module may be protected by the following.
