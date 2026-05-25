@@ -1,14 +1,12 @@
 [project]
 name = "torch-einops-kit"
-version = "0.1.5"
+version = "0.1.6"
 description = "Typed tensor-shaping, masking, padding, device-routing, and checkpoint utilities for PyTorch and `einops`. A superset of `lucidrains/torch-einops-utils` with similar utilities from other lucidrains packages. Adds strict typing, extensive tests, and comprehensive docstrings."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "CC-BY-NC-4.0"
-authors = [
-  { name = "Phil Wang", email = "lucidrains@gmail.com" },
-  { name = "Hunter Hogan", email = "HunterHogan@pm.me" }
-]
+license-files = ["LICEN[CS]E*"]
+authors = [{ name = "Hunter Hogan", email = "HunterHogan@pm.me" }]
 maintainers = [{ name = "Hunter Hogan", email = "HunterHogan@pm.me" }]
 keywords = [
   "artificial intelligence",
@@ -46,11 +44,13 @@ Issues = "https://github.com/hunterhogan/torch_einops_kit/issues"
 Repository = "https://github.com/hunterhogan/torch_einops_kit.git"
 
 [dependency-groups]
+dev = [
+  "pytest-cov",
+]
 testing = [
-  "more-itertools>=11.0.2",
-  "numpy>=2.2.6",
-  "pytest>=9.0.3",
-  "pytest-cov>=7.1.0",
+  "more-itertools",
+  "numpy>=2.0.0",
+  "pytest",
 ]
 
 [build-system]

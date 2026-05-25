@@ -115,7 +115,7 @@ def test_maybe(
 			return (value + additional) * multiplier
 
 	transform_probe = TransformProbe()
-	result = maybe(None if expect_identity else transform_probe)(input_value, *extra_arguments, **extra_keyword_arguments) # pyright: ignore[reportArgumentType]
+	result = maybe(None if expect_identity else transform_probe)(input_value, *extra_arguments, **extra_keyword_arguments)  # pyright: ignore[reportArgumentType]
 
 	assert transform_probe.called is expected_called, (
 		f'maybe call state was {transform_probe.called}, expected {expected_called} for {input_value=}, {extra_arguments=}, and {extra_keyword_arguments=}.'

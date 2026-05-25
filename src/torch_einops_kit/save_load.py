@@ -365,19 +365,19 @@ def save_load(
 	[7] tests.test_save_load.test_init_and_load
 
 	[8] tests.test_save_load_extended.test_save_load_supports_custom_method_names_and_config_storage
-	"""
+	"""  # noqa: DOC502
 
 	def _save_load(klass: type[TorchNNModule]) -> type[TorchNNModule]:
 		if not issubclass(klass, Module):
 			message: str = 'save_load should decorate a subclass of torch.nn.Module'
 			raise TypeError(message)
 
-		_orig_init: Callable[..., None] = klass.__init__
+		original_init: Callable[..., None] = klass.__init__
 
-		@wraps(_orig_init)
+		@wraps(original_init)
 		def __init__(self: TorchNNModule, *args: Any, **kwargs: Any) -> None:
 			setattr(self, config_instance_var_name, (args, kwargs))
-			_orig_init(self, *args, **kwargs)
+			original_init(self, *args, **kwargs)
 
 		def _save(self: TorchNNModule, path: StrPath, *, overwrite: bool = True) -> None:
 			"""Save the current model state and constructor configuration to a checkpoint file.
@@ -394,10 +394,6 @@ def save_load(
 			overwrite : bool = True
 				When `False`, raise `FileExistsError` if a file already exists at `path`. When
 				`True`, an existing file at `path` is silently replaced.
-
-			Returns
-			-------
-			None
 
 			Raises
 			------
@@ -437,10 +433,6 @@ def save_load(
 			strict : bool = True
 				Forwarded to `load_state_dict`. When `True`, the key sets of the checkpoint and the
 				current model must match exactly.
-
-			Returns
-			-------
-			None
 
 			Raises
 			------

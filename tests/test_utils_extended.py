@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from torch.utils._pytree import tree_flatten, tree_unflatten
+from torch.utils._pytree import tree_flatten, tree_unflatten  # noqa: PLC2701
 from torch_einops_kit import tree_flatten_with_inverse, tree_map_tensor
 import pytest
 import torch

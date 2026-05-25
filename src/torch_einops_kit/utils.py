@@ -15,7 +15,7 @@ Functions
 from __future__ import annotations
 
 from torch import is_tensor, Tensor
-from torch.utils._pytree import PyTree, tree_flatten, tree_map, tree_unflatten
+from torch.utils._pytree import PyTree, tree_flatten, tree_map, tree_unflatten  # noqa: PLC2701
 from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:

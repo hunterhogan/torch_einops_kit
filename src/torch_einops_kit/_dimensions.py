@@ -126,7 +126,7 @@ def align_dims_left(tensors: Sequence[Tensor], *, ndim: int | None = None) -> tu
 		https://context7.com/arogozhnikov/einops
 	"""
 	if not exists(ndim):
-		ndim = max([t.ndim for t in tensors])
+		ndim = max(t.ndim for t in tensors)
 
 	return tuple(pad_right_ndim(t, ndim - t.ndim) for t in tensors)
 

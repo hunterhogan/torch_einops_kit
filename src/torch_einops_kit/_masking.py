@@ -167,8 +167,8 @@ def mask_after(t: Tensor, value: Tensor | Number, dim: int = -1, *, inclusive: b
 	"""
 	mask: Tensor = t == value
 	if inclusive:
-		mask = shift_right(mask, amount = 1, dim = dim, pad_value = False)
-	return mask.float().cumsum(dim = dim) == 0.
+		mask = shift_right(mask, amount=1, dim=dim, pad_value=False)
+	return mask.int().cumsum(dim=dim) == 0
 
 def mask_before(t: Tensor, value: Tensor | Number, dim: int = -1, *, inclusive: bool = True) -> Tensor:
 	"""Compute a boolean mask over `t` that stays `True` from the last `value` onward along `dim`.
@@ -220,8 +220,8 @@ def mask_before(t: Tensor, value: Tensor | Number, dim: int = -1, *, inclusive: 
 	"""
 	mask: Tensor = t == value
 	if inclusive:
-		mask = shift_left(mask, amount = 1, dim = dim, pad_value = False)
-	return reverse_cumsum(mask.float(), dim = dim) == 0.
+		mask = shift_left(mask, amount=1, dim=dim, pad_value=False)
+	return reverse_cumsum(mask.int(), dim=dim) == 0
 
 def or_masks(masks: Sequence[Tensor | None]) -> Tensor | None:
 	"""Reduce a sequence of boolean mask `Tensor` values to a single mask using element-wise logical OR.

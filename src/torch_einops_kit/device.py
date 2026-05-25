@@ -300,7 +300,7 @@ def move_inputs_to_module_device(fn: Callable[Concatenate[TorchNNModule, PSpec],
 	return workhorse
 
 """
-Some or all of the logic in this module may be protected by the following.
+Some of the logic in this module may be protected by the following.
 
 MIT License
 

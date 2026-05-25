@@ -119,7 +119,7 @@ def test_mask_before_dim_zero(mask_before_case: tuple[Tensor, int, Tensor, Tenso
 		f'mask_before returned {actual_mask}, expected {expected_mask.T} for transposed input, {delimiter_value=}, and {inclusive=}.'
 	)
 
-def test_reduce_masks(sequence_tensors: list[Tensor], empty_optional_tensor_sequence: list[Tensor | None]) -> None:
+def test_reduce_masks(sequence_tensors: list[Tensor], empty_optional_tensor_sequence: list[Tensor | None]) -> None:  # noqa: PLR0914
 	list_tensors = sequence_tensors
 
 	lengths_vector = torch.tensor([tensor_value.shape[-1] for tensor_value in list_tensors], dtype=torch.long)

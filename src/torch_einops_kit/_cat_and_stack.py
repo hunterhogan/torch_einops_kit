@@ -33,6 +33,9 @@ def broadcast_cat(tensors: Sequence[Tensor], dim: int = -1) -> Tensor:
 	"""
 	return cat(cast('list[Tensor]', broadcast_tensors(*tensors)), dim)
 
+# NOTE `broadcat` is the identifier used in lucidrains packages.
+broadcat = broadcast_cat
+
 @safe
 def safe_cat(tensors: tuple[Tensor, ...] | list[Tensor], dim: int = 0) -> Tensor | None:
 	"""Concatenate tensors from `tensors` along an existing dimension, skipping `None` values.

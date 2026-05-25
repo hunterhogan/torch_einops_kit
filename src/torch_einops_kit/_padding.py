@@ -454,12 +454,12 @@ def pad_sequence(
 	return output
 
 @overload
-def pad_sequence_and_cat(tensors: Sequence[Tensor], *, dim_cat: int = 0, dim: int = -1, value: float = 0., left: bool = False) -> Tensor:...
+def pad_sequence_and_cat(tensors: Sequence[Tensor], *, dim_cat: int = 0, dim: int = -1, value: float = 0., left: bool = False) -> Tensor: ...
 @overload
-def pad_sequence_and_cat(tensors: list[Tensor] = [], *, dim_cat: int = 0, dim: int = -1, value: float = 0., left: bool = False) -> None:...  # noqa: B006
+def pad_sequence_and_cat(tensors: list[Tensor] = [], *, dim_cat: int = 0, dim: int = -1, value: float = 0., left: bool = False) -> None: ...  # noqa: B006
 @overload
-def pad_sequence_and_cat(tensors: tuple[()]=(), *, dim_cat: int = 0, dim: int = -1, value: float = 0., left: bool = False) -> None:...
-def pad_sequence_and_cat(tensors: Sequence[Tensor]=(), *, dim_cat: int = 0, dim: int = -1, value: float = 0., left: bool = False) -> Tensor | None:
+def pad_sequence_and_cat(tensors: tuple[()] = (), *, dim_cat: int = 0, dim: int = -1, value: float = 0., left: bool = False) -> None: ...
+def pad_sequence_and_cat(tensors: Sequence[Tensor] = (), *, dim_cat: int = 0, dim: int = -1, value: float = 0., left: bool = False) -> Tensor | None:
 	"""Pad `tensors` to a shared length along `dim` and concatenate along `dim_cat`.
 
 	You can use `pad_sequence_and_cat` to align and merge a heterogeneous-length sequence of `Tensor`
@@ -514,7 +514,7 @@ def pad_sequence_and_cat(tensors: Sequence[Tensor]=(), *, dim_cat: int = 0, dim:
 	[3] tests/test_utils.py
 	"""
 	padded: Tensor | list[Tensor] | None = pad_sequence(tensors, dim=dim, value=value, left=left, return_stacked=False, return_lens=False)
-	if padded is not None: # pyright: ignore[reportUnnecessaryComparison]
+	if padded is not None:  # pyright: ignore[reportUnnecessaryComparison]
 		return cat(padded, dim=dim_cat)
 	return padded
 
@@ -554,7 +554,7 @@ def shift(t: Tensor, amount: int = 1, dim: int = -1, pad_value: float = 0.) -> T
 	----------
 	[1] torch_einops_kit.pad_at_dim
 	"""
-	return pad_at_dim(t, (amount, -amount), dim = dim, value = pad_value)
+	return pad_at_dim(t, (amount, -amount), dim=dim, value=pad_value)
 
 def shift_left(t: Tensor, amount: int = 1, dim: int = -1, pad_value: float = 0.) -> Tensor:
 	"""Shift values in `t` toward smaller indices along `dim`.
@@ -589,7 +589,7 @@ def shift_left(t: Tensor, amount: int = 1, dim: int = -1, pad_value: float = 0.)
 	----------
 	[1] torch_einops_kit.shift
 	"""
-	return shift(t, -amount, dim = dim, pad_value = pad_value)
+	return shift(t, -amount, dim=dim, pad_value=pad_value)
 
 def shift_right(t: Tensor, amount: int = 1, dim: int = -1, pad_value: float = 0.) -> Tensor:
 	"""Shift values in `t` toward larger indices along `dim`.
@@ -624,7 +624,7 @@ def shift_right(t: Tensor, amount: int = 1, dim: int = -1, pad_value: float = 0.
 	----------
 	[1] torch_einops_kit.shift
 	"""
-	return shift(t, amount, dim = dim, pad_value = pad_value)
+	return shift(t, amount, dim=dim, pad_value=pad_value)
 
 """
 Some of the logic in this module may be protected by the following.

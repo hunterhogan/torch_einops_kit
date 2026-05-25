@@ -259,7 +259,7 @@ def test_dehydrate_config_respects_config_instance_var_name(config_instance_var_
 
 @pytest.mark.parametrize(('dim', 'hidden_dim', 'config_tag'), [pytest.param(7, 11, 'manual-dehydrated-config', id='manual-dehydrated-config')])
 def test_rehydrate_config_instantiates_manual_dehydrated_modules(dim: int, hidden_dim: int, config_tag: str) -> None:
-	config_args_kwargs: ConfigArgsKwargsObject = (({'__save_load_module__': True, 'klass': SaveLoadExtendedLinearModel, 'config': ((dim, hidden_dim), {})},), {'tag': config_tag}) # pyright: ignore[reportUnknownVariableType]
+	config_args_kwargs: ConfigArgsKwargsObject = (({'__save_load_module__': True, 'klass': SaveLoadExtendedLinearModel, 'config': ((dim, hidden_dim), {})},), {'tag': config_tag})  # pyright: ignore[reportUnknownVariableType]
 
 	rehydrated_config = rehydrate_config(config_args_kwargs)
 	args, kwargs = rehydrated_config

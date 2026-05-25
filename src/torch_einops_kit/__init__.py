@@ -150,7 +150,8 @@ from torch_einops_kit._dimensions import (
 	pad_right_ndim as pad_right_ndim, pad_right_ndim_to as pad_right_ndim_to)
 
 # isort: split
-from torch_einops_kit._cat_and_stack import broadcast_cat as broadcast_cat, safe_cat as safe_cat, safe_stack as safe_stack
+from torch_einops_kit._cat_and_stack import (
+	broadcast_cat as broadcast_cat, broadcat as broadcat, safe_cat as safe_cat, safe_stack as safe_stack)
 
 # isort: split
 from torch_einops_kit._padding import (
@@ -171,6 +172,3 @@ from torch_einops_kit.utils import tree_flatten_with_inverse as tree_flatten_wit
 from torch_einops_kit.einops import pack_with_inverse  # pyright: ignore[reportUnusedImport]
 from torch_einops_kit.nn import Identity, Lambda, Sequential  # pyright: ignore[reportUnusedImport]
 from torch_einops_kit.scaleValues import exclusive_cumsum, l2norm, masked_mean, reverse_cumsum  # pyright: ignore[reportUnusedImport]
-
-# NOTE `broadcat` is the identifier used in lucidrains packages.
-broadcat = broadcast_cat

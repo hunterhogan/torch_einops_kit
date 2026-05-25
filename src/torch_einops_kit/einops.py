@@ -30,7 +30,8 @@ from torch_einops_kit import default, first
 from typing import overload, TYPE_CHECKING
 
 if TYPE_CHECKING:
-	from collections.abc import Callable, Sequence
+	from collections.abc import Sequence
+	from torch_einops_kit import InversePackListTensors, InversePackTensor
 
 def pack_one(t: Tensor, pattern: str) -> tuple[Tensor, Sequence[tuple[int, ...] | list[int]]]:
 	"""Pack one `Tensor` and return shape metadata for paired reconstruction.
@@ -63,93 +64,114 @@ def pack_one(t: Tensor, pattern: str) -> tuple[Tensor, Sequence[tuple[int, ...] 
 	return pack([t], pattern)
 
 @overload
-def pack_with_inverse(t: Tensor, pattern: str) -> tuple[Tensor, Callable[[Tensor, str | None], Tensor]]: ...
+def pack_with_inverse(t: Tensor, pattern: str) -> tuple[Tensor, InversePackTensor]: ...
 @overload
-def pack_with_inverse(t: list[Tensor], pattern: str) -> tuple[Tensor, Callable[[Tensor, str | None], list[Tensor]]]: ...
-def pack_with_inverse(t: Tensor | list[Tensor], pattern: str) -> tuple[Tensor, Callable[[Tensor, str | None], Tensor | list[Tensor]]]:
-	"""Pack `t` with `pattern` using einops and return a paired inverse unpacking function.
+def pack_with_inverse(t: list[Tensor], pattern: str) -> tuple[Tensor, InversePackListTensors]: ...
+def pack_with_inverse(t: Tensor | list[Tensor], pattern: str) -> tuple[Tensor, InversePackTensor] | tuple[Tensor, InversePackListTensors]:
+	"""Pack `t` with `pattern` and return a paired inverse unpacking function.
 
-	You can use this function to merge one or more tensors into a single packed tensor using an
-	einops `pack` pattern [1] and to later restore the original shapes. When `t` is a single
-	`torch.Tensor`, the function wraps `t` in a list before packing and unwraps the result inside the
-	inverse function. When `t` is a list of tensors, the inverse function returns a list of tensors.
-	The inverse function accepts an optional `inv_pattern` argument to override the pattern used for
-	unpacking; when `inv_pattern` is `None`, the original `pattern` is reused.
+	You can use this function to merge one `Tensor` or one `list[Tensor]` into one packed `Tensor`
+	with `einops.pack` [1] and to carry forward an inverse callable tied to the captured packed-shape
+	metadata. The returned `inverse` callable accepts a packed or transformed `Tensor` `out`,
+	optionally accepts an override unpacking pattern `inv_pattern`, and reconstructs either one
+	`Tensor` or `list[Tensor]` to match the kind of `t`.
 
 	Parameters
 	----------
 	t : Tensor | list[Tensor]
-		A single tensor or a list of tensors to pack.
+		One `Tensor` or one `list[Tensor]` to pack.
 	pattern : str
-		An einops pack pattern string such as `'b * d'`, where `*` collects the packed dimensions.
+		Einops pack pattern string passed to `einops.pack` [1]. The `*` axis marks the dimensions to
+		collect into the packed axis.
 
 	Returns
 	-------
 	packed : Tensor
 		The packed tensor produced by `einops.pack` [1].
-	inverse : Callable[[Tensor, str | None], Tensor | list[Tensor]]
-		A function that accepts the packed (or transformed) tensor and an optional override pattern
-		and returns the unpacked tensor or list of tensors.
+	inverse : InversePackTensor | InversePackListTensors
+		Paired inverse callable. When `t` is one `Tensor`, `inverse` has type `InversePackTensor` [2]
+		and returns one `Tensor`. When `t` is a `list[Tensor]`, `inverse` has type
+		`InversePackListTensors` [3] and returns `list[Tensor]`.
+
+	Output Kind
+	-----------
+	tensor input : dispatch
+		Passing one `Tensor` returns an `inverse` callable that unwraps the single unpacked result.
+	list input : dispatch
+		Passing `list[Tensor]` returns an `inverse` callable that preserves the unpacked list
+		structure.
+
+	Unpacking Pattern
+	-----------------
+	`inv_pattern` override : pattern reuse
+		The returned `inverse` reuses `pattern` when `inv_pattern` is `None`. Passing `inv_pattern`
+		forwards `inv_pattern` to `einops.unpack` [4] so `inverse` can unpack a derived `Tensor`, as
+		long as `inv_pattern` remains compatible with the packed-shape metadata captured during
+		packing.
 
 	See Also
 	--------
-	tree_flatten_with_inverse : Flatten a PyTree and return an inverse reconstruction function.
+	pack_one :
+		Pack one `Tensor` and return shape metadata for paired reconstruction.
+	tree_flatten_with_inverse :
+		Flatten a PyTree and return an inverse reconstruction function.
+	unpack_one :
+		Unpack one `Tensor` using metadata produced by `pack_one`.
 
 	Examples
 	--------
-	Pack a single tensor and recover the original shape [2]:
+	Pack one tensor and recover the original shape.
 
 	```python
 		import torch
+
 		from torch_einops_kit import pack_with_inverse
 
 		t = torch.randn(3, 12, 2, 2)
 		packed, inverse = pack_with_inverse(t, 'b * d')
-		# packed.shape == (3, 24, 2)
+
+		assert packed.shape == (3, 24, 2)
+
 		recovered = inverse(packed)
-		# recovered.shape == (3, 12, 2, 2)
-	```
-
-	Pack a list of tensors and unpack with an overriding pattern [2]:
-
-	```python
-		t = torch.randn(3, 12, 2)
-		u = torch.randn(3, 4, 2)
-		packed, inverse = pack_with_inverse([t, u], 'b * d')
-		# packed.shape == (3, 28, 2)
-
-		reduced = packed.sum(dim=-1)
-		t_out, u_out = inverse(reduced, 'b *')
-		# t_out.shape == (3, 12)
-		# u_out.shape == (3, 4)
+		assert recovered.shape == (3, 12, 2, 2)
 	```
 
 	References
 	----------
 	[1] einops.pack - einops documentation
 		https://einops.rocks/api/pack/
-	[2] tests.test_utils.test_pack_with_inverse
+	[2] torch_einops_kit.InversePackTensor
+
+	[3] torch_einops_kit.InversePackListTensors
+
+	[4] einops pack/unpack API
+		https://einops.rocks/api/pack_unpack/
 
 	"""
-	is_one: bool = is_tensor(t)
-
-	if is_one:
+	if is_tensor(t):
+		is_one = True
 		sequenceT: Sequence[Tensor] = [t]
 	else:
+		is_one = False
 		sequenceT = t
 
 	packed, packed_shape = pack(sequenceT, pattern)
 
-	def inverse(out: Tensor, inv_pattern: str | None = None) -> Tensor | list[Tensor]:
+	def inverse_is_one(out: Tensor, inv_pattern: str | None = None) -> Tensor:
 		inv_pattern = default(inv_pattern, pattern)
 		unpacked: list[Tensor] = unpack(out, packed_shape, inv_pattern)
 
-		if is_one:
-			return first(unpacked)
+		return first(unpacked)
+
+	def inverse_is_list(out: Tensor, inv_pattern: str | None = None) -> list[Tensor]:
+		inv_pattern = default(inv_pattern, pattern)
+		unpacked: list[Tensor] = unpack(out, packed_shape, inv_pattern)
 
 		return unpacked
 
-	return packed, inverse
+	if is_one:
+		return packed, inverse_is_one
+	return packed, inverse_is_list
 
 def unpack_one(t: Tensor, ps: Sequence[tuple[int, ...] | list[int]], pattern: str) -> Tensor:
 	"""Unpack one `Tensor` using packed-shape metadata produced by `pack_one`.
@@ -186,7 +208,7 @@ def unpack_one(t: Tensor, ps: Sequence[tuple[int, ...] | list[int]], pattern: st
 	return unpack(t, list(ps), pattern)[0]
 
 """
-Some or all of the logic in this module may be protected by the following.
+Some of the logic in this module may be protected by the following.
 
 MIT License
 

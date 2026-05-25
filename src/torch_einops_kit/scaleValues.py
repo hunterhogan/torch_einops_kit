@@ -256,7 +256,7 @@ def reverse_cumsum(t: Tensor, dim: int = -1, *, keepdim: bool = True) -> Tensor:
 	[4] Broadcasting semantics - PyTorch documentation
 		https://pytorch.org/docs/stable/notes/broadcasting.html
 	"""
-	return t.sum(dim = dim, keepdim = keepdim) - t.cumsum(dim = dim) + t
+	return t.sum(dim=dim, keepdim=keepdim) - t.cumsum(dim=dim) + t
 
 class RMSNorm(Module):
 	"""Normalize feature vectors with root-mean-square scaling and a learned rescaling parameter.

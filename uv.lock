@@ -877,7 +877,7 @@ wheels = [
 
 [[package]]
 name = "torch-einops-kit"
-version = "0.1.2"
+version = "0.1.6"
 source = { editable = "." }
 dependencies = [
     { name = "einops" },
@@ -886,27 +886,29 @@ dependencies = [
 ]
 
 [package.dev-dependencies]
+dev = [
+    { name = "pytest-cov" },
+]
 testing = [
     { name = "more-itertools" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pytest" },
-    { name = "pytest-cov" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "einops", specifier = ">=0.8.2" },
-    { name = "torch", specifier = ">=2.10.0" },
+    { name = "torch", specifier = ">=2.0.0" },
     { name = "typing-extensions", specifier = ">=4.0.0" },
 ]
 
 [package.metadata.requires-dev]
+dev = [{ name = "pytest-cov", specifier = ">=7.1.0" }]
 testing = [
-    { name = "more-itertools", specifier = ">=11.0.2" },
-    { name = "numpy", specifier = ">=2.2.6" },
-    { name = "pytest", specifier = ">=9.0.3" },
-    { name = "pytest-cov", specifier = ">=7.1.0" },
+    { name = "more-itertools" },
+    { name = "numpy", specifier = ">=2.0.0" },
+    { name = "pytest" },
 ]
 
 [[package]]

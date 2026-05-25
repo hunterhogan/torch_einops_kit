@@ -1,8 +1,9 @@
+# ruff: noqa: E224
 from __future__ import annotations
 
 from os import PathLike
 from torch.nn import Module
-from typing import Any, Literal, ParamSpec, Protocol, TYPE_CHECKING, TypeAlias, TypedDict, TypeVar
+from typing import Any, Literal, overload, ParamSpec, Protocol, TYPE_CHECKING, TypeAlias, TypedDict, TypeVar
 
 if TYPE_CHECKING:
 	from torch import Tensor
@@ -332,6 +333,82 @@ class IdentityCallable(Protocol):
 	"""
 	def __call__(self, value: TVar, /, *args: object, **kwargs: object) -> TVar: ...
 
+class InversePackListTensors(Protocol):
+	"""Annotate the inverse callable returned by `pack_with_inverse` for `list[Tensor]` input.
+
+	You can use `InversePackListTensors` as a `Protocol` [1] for the inverse callable paired with
+	`pack_with_inverse` [2] when `t` is a `list[Tensor]`. The callable accepts a packed or
+	transformed `Tensor` `out`, optionally accepts an override unpacking pattern `inv_pattern`, and
+	returns a `list[Tensor]` whose item count and per-item shape match the original pack step.
+
+	Call Signatures
+	---------------
+	default pattern : callable
+		`inverse(out)` reuses the original `pattern` captured by `pack_with_inverse` [2].
+	override pattern : callable
+		`inverse(out, inv_pattern)` forwards `inv_pattern` to `einops.unpack` [3] instead of reusing
+		the original `pattern`. The `inv_pattern` must stay compatible with the packed-shape metadata
+		captured during packing.
+
+	See Also
+	--------
+	InversePackTensor : Annotate the inverse callable returned by `pack_with_inverse` for one
+		`Tensor` input.
+	torch_einops_kit.einops.pack_with_inverse : Build an `InversePackListTensors` callable for
+		`list[Tensor]` input.
+
+	References
+	----------
+	[1] Protocol - Python typing documentation
+		https://docs.python.org/3/library/typing.html#typing.Protocol
+	[2] torch_einops_kit.einops.pack_with_inverse
+
+	[3] einops pack/unpack API
+		https://einops.rocks/api/pack_unpack/
+	"""
+	@overload
+	def __call__(self, out: Tensor) -> list[Tensor]: ...
+	@overload
+	def __call__(self, out: Tensor, inv_pattern: str | None) -> list[Tensor]: ...
+
+class InversePackTensor(Protocol):
+	"""Annotate the inverse callable returned by `pack_with_inverse` for one `Tensor` input.
+
+	You can use `InversePackTensor` as a `Protocol` [1] for the inverse callable paired with
+	`pack_with_inverse` [2] when `t` is one `Tensor`. The callable accepts a packed or transformed
+	`Tensor` `out`, optionally accepts an override unpacking pattern `inv_pattern`, and returns one
+	reconstructed `Tensor` instead of `list[Tensor]`.
+
+	Call Signatures
+	---------------
+	default pattern : callable
+		`inverse(out)` reuses the original `pattern` captured by `pack_with_inverse` [2].
+	override pattern : callable
+		`inverse(out, inv_pattern)` forwards `inv_pattern` to `einops.unpack` [3] instead of reusing
+		the original `pattern`. The returned callable unwraps the single reconstructed `Tensor` from
+		the single-item unpack result.
+
+	See Also
+	--------
+	InversePackListTensors : Annotate the inverse callable returned by `pack_with_inverse` for
+		`list[Tensor]` input.
+	torch_einops_kit.einops.pack_with_inverse : Build an `InversePackTensor` callable for one
+		`Tensor` input.
+
+	References
+	----------
+	[1] Protocol - Python typing documentation
+		https://docs.python.org/3/library/typing.html#typing.Protocol
+	[2] torch_einops_kit.einops.pack_with_inverse
+
+	[3] einops pack/unpack API
+		https://einops.rocks/api/pack_unpack/
+	"""
+	@overload
+	def __call__(self, out: Tensor) -> Tensor: ...
+	@overload
+	def __call__(self, out: Tensor, inv_pattern: str | None) -> Tensor: ...
+
 class SupportsIntIndex(Protocol[T_co]):
 	"""Match any object that supports integer indexing via `__getitem__`.
 
@@ -352,29 +429,3 @@ class SupportsIntIndex(Protocol[T_co]):
 	[2] torch_einops_kit.first
 	"""
 	def __getitem__(self, index: int, /) -> T_co: ...
-
-"""
-Some or all of the logic in this module may be protected by the following.
-
-MIT License
-
-Copyright (c) 2026 Phil Wang
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-"""
