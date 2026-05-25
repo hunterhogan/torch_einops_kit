@@ -130,8 +130,9 @@ from torch_einops_kit._semiotics import decreasing as decreasing, zeroIndexed as
 # isort: split
 from torch_einops_kit._theTypes import (
 	ConfigArgsKwargs as ConfigArgsKwargs, DehydratedCheckpoint as DehydratedCheckpoint, DehydratedTorchNNModule as DehydratedTorchNNModule,
-	DimAndValue as DimAndValue, IdentityCallable as IdentityCallable, PSpec as PSpec, RVar as RVar, StrPath as StrPath,
-	SupportsIntIndex as SupportsIntIndex, T_co as T_co, TorchNNModule as TorchNNModule, TVar as TVar)
+	DimAndValue as DimAndValue, IdentityCallable as IdentityCallable, InversePackListTensors as InversePackListTensors,
+	InversePackTensor as InversePackTensor, PSpec as PSpec, RVar as RVar, StrPath as StrPath, SupportsIntIndex as SupportsIntIndex,
+	T_co as T_co, TorchNNModule as TorchNNModule, TVar as TVar)
 
 # isort: split
 from torch_einops_kit._helpers import (
