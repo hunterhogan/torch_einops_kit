@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from hunterMakesPy import decreasing, zeroIndexed
 from torch import cat, stack, Tensor, tensor
-from torch_einops_kit import decreasing, DimAndValue, first, zeroIndexed
+from torch_einops_kit import DimAndValue, first
 from typing import Literal, overload, TYPE_CHECKING
 from typing_extensions import Unpack
 import torch

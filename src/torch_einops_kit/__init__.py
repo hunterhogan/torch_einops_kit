@@ -125,9 +125,6 @@ scaleValues
 # isort: split
 from __future__ import annotations
 
-from torch_einops_kit._semiotics import decreasing as decreasing, zeroIndexed as zeroIndexed
-
-# isort: split
 from torch_einops_kit._theTypes import (
 	ConfigArgsKwargs as ConfigArgsKwargs, DehydratedCheckpoint as DehydratedCheckpoint, DehydratedTorchNNModule as DehydratedTorchNNModule,
 	DimAndValue as DimAndValue, IdentityCallable as IdentityCallable, InversePackListTensors as InversePackListTensors,

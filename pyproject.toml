@@ -31,6 +31,7 @@ classifiers = [
 ]
 dependencies = [
   "einops>=0.8.2",
+  "huntermakespy>=0.7.0",
   "torch>=2.0.0",
   "typing-extensions>=4.0.0",
 ]
@@ -44,14 +45,8 @@ Issues = "https://github.com/hunterhogan/torch_einops_kit/issues"
 Repository = "https://github.com/hunterhogan/torch_einops_kit.git"
 
 [dependency-groups]
-dev = [
-  "pytest-cov",
-]
-testing = [
-  "more-itertools",
-  "numpy>=2.0.0",
-  "pytest",
-]
+dev = ["pytest-cov"]
+testing = ["more-itertools", "numpy>=2.0.0", "pytest"]
 
 [build-system]
 requires = ["uv_build>=0.11.8,<0.12.0"]
@@ -73,4 +68,4 @@ filenameCitationDOTcff = "CITATION.cff"
 pathFilenameCitationSSOT = "citations/CITATION.cff"
 
 [tool.uv]
-default-groups = ["testing"]
+default-groups = ["dev", "testing"]
