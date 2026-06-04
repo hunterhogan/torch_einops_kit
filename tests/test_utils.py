@@ -5,7 +5,7 @@ from torch_einops_kit import (
 	align_dims_left, and_masks, exists, lens_to_mask, mask_after, mask_before, maybe, or_masks, pad_at_dim, pad_left_at_dim,
 	pad_left_at_dim_to, pad_left_ndim_to, pad_ndim, pad_right_at_dim, pad_right_at_dim_to, pad_right_ndim_to, pad_sequence,
 	pad_sequence_and_cat, safe_cat, safe_stack, shape_with_replace, shift_left, shift_right, slice_at_dim, slice_left_at_dim,
-	slice_right_at_dim)
+	slice_right_at_dim, pad_right_ndim_to_and_expand_as, repeat_interleave_to_match)
 from torch_einops_kit.einops import pack_with_inverse
 from torch_einops_kit.scaleValues import exclusive_cumsum, masked_mean, reverse_cumsum
 from torch_einops_kit.utils import tree_flatten_with_inverse, tree_map_tensor
@@ -285,8 +285,37 @@ def test_reverse_cumsum() -> None:
     t: torch.Tensor = tensor([1, 2, 3])
     assert reverse_cumsum(t).tolist() == [6, 5, 3]
 
+def test_pad_right_ndim_to_and_expand_as() -> None:
+
+    target = torch.randn(2, 8, 64)
+    source = torch.randint(0, 8, (2, 4))
+    assert pad_right_ndim_to_and_expand_as(source, target).shape == (2, 4, 64)
+
+    dest = torch.zeros(2, 8, 64)
+    source = torch.arange(4).unsqueeze(0).expand(2, -1)
+
+    scattered = dest.scatter(1, pad_right_ndim_to_and_expand_as(source, dest), torch.ones(2, 4, 64))
+
+    assert (scattered[:, :4] == 1.).all()
+    assert (scattered[:, 4:] == 0.).all()
+
+def test_repeat_interleave_to_match() -> None:
+    time_lens = torch.tensor([2, 3])
+
+    out = repeat_interleave_to_match(time_lens, torch.randn(4, 512))
+    assert out.tolist() == [2, 2, 3, 3]
+
+    out2 = repeat_interleave_to_match(time_lens, torch.randn(6, 128))
+    assert out2.tolist() == [2, 2, 2, 3, 3, 3]
+
+    out3 = repeat_interleave_to_match(time_lens, 6)
+    assert out3.tolist() == [2, 2, 2, 3, 3, 3]
+
+    out4 = repeat_interleave_to_match(time_lens, 2)
+    assert out4.tolist() == [2, 3]
+
 """
-Some or all of the logic in this module may be protected by the following.
+Some of the logic in this module may be protected by the following.
 
 MIT License
 

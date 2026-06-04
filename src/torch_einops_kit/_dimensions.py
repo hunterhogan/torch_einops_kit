@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from torch_einops_kit import exists
+from torch_einops_kit import default, divisible_by, exists
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -343,8 +343,161 @@ def pad_right_ndim_to(t: Tensor, ndims: int) -> Tensor:
 
 	return pad_right_ndim(t, ndims - t.ndim)
 
+def pad_right_ndim_to_and_expand_as(source: Tensor, target: Tensor) -> Tensor:
+	"""Expand `source` across the trailing axes of `target`.
+
+	You can use this function to prepare `source` for `torch.Tensor.gather` [1] or other
+	rank-sensitive PyTorch operations against `target`. The function pads `source` with trailing
+	singleton dimensions until `source` has the same rank as `target`, then expands `source` across
+	the trailing shape contributed by `target`. The function returns a view when PyTorch can represent
+	the result without copying data.
+
+	Parameters
+	----------
+	source : Tensor
+		The tensor to pad and expand.
+	target : Tensor
+		The reference tensor whose trailing axes determine the expanded shape.
+
+	Returns
+	-------
+	expanded : Tensor
+		A tensor view with shape `source.shape + target.shape[source.ndim:]` when `target.ndim >
+		source.ndim`. When `target.ndim <= source.ndim`, the returned tensor keeps `source.shape`.
+
+	See Also
+	--------
+	`pad_right_ndim_to`
+		Pad trailing singleton dimensions without expanding values.
+	`align_dims_left`
+		Align several tensors for broadcasting by padding trailing singleton dimensions.
+
+	PyTorch
+	-------
+	expansion : Tensor view
+		This function calls `pad_right_ndim_to` [2] and then `torch.Tensor.expand` [3]. The expansion
+		repeats metadata rather than materializing copies, so a gather index tensor can be broadcast
+		from shape `(b, k)` to `(b, k, d)` before `torch.Tensor.gather` [1].
+
+	Examples
+	--------
+	This example simplifies the flattened gather pattern from `rigidformer` [4].
+
+	```python
+		from torch_einops_kit import pad_right_ndim_to_and_expand_as
+
+		safe_idx = pad_right_ndim_to_and_expand_as(safe_idx, all_pos) other_pos = all_pos.gather(1,
+		safe_idx)
+	```
+
+	This example mirrors `gather_vectors()` in `worldparticle` [5].
+
+	```python
+		from torch_einops_kit import pad_right_ndim_to_and_expand_as
+
+		expanded_indices = pad_right_ndim_to_and_expand_as(indices, src) gathered = src.gather(1,
+		expanded_indices)
+	```
+
+	References
+	----------
+	[1] torch.Tensor.gather - PyTorch documentation
+		https://pytorch.org/docs/stable/generated/torch.Tensor.gather.html
+	[2] `pad_right_ndim_to`
+
+	[3] torch.Tensor.expand - PyTorch documentation
+		https://pytorch.org/docs/stable/generated/torch.Tensor.expand.html
+	[4] lucidrains/rigidformer `rigidformer.py`
+		https://github.com/lucidrains/rigidformer/blob/main/rigidformer/rigidformer.py
+	[5] lucidrains/worldparticle `worldparticle.py`
+		https://github.com/lucidrains/worldparticle/blob/main/worldparticle/worldparticle.py
+	"""
+	shape: list[int] = [*source.shape, *target.shape[source.ndim:None]]
+	source = pad_right_ndim_to(source, target.ndim)
+	return source.expand(shape)
+
+def repeat_interleave_to_match(t: Tensor, target: Tensor | int, dim: int = 0, target_dim: int | None = None) -> Tensor:
+	"""Repeat slices of `t` along `dim` until `t` matches the target length.
+
+	You can use this function to align the length of `t` along `dim` with an integer target length or
+	with the size of `Tensor` `target` along `target_dim`. The function returns `t` unchanged when the
+	lengths already match. Otherwise the function repeats each slice of `t` the same number of times
+	with `torch.Tensor.repeat_interleave` [1].
+
+	Parameters
+	----------
+	t : Tensor
+		The tensor whose size along `dim` will be matched to the resolved target length.
+	target : Tensor | int
+		Either the target length directly, or a tensor whose size provides the target length.
+	dim : int = 0
+		The axis of `t` whose length will be repeated.
+	target_dim : int | None = None
+		The axis of `target` whose length will be used when `target` is a tensor. When `target_dim` is
+		`None`, the function uses `dim`.
+
+	Returns
+	-------
+	matched : Tensor
+		`t` itself when the resolved target length already equals `t.shape[dim]`. Otherwise a tensor
+		whose size along `dim` equals the resolved target length.
+
+	Raises
+	------
+	ValueError
+		When the resolved target length is not divisible by `t.shape[dim]`.
+
+	See Also
+	--------
+	`align_dims_left`
+		Align tensor ranks for broadcasting without material repetition.
+	`pad_right_ndim_to_and_expand_as`
+		Expand a tensor across trailing axes of a reference tensor instead of repeating values along
+		one axis.
+
+	PyTorch
+	-------
+	repeat factor : int
+		This function resolves the target length, computes `repeatFactor = len_target // len_t`, and
+		applies `torch.Tensor.repeat_interleave` [1]. When the resolved target length already equals
+		`t.shape[dim]`, the function returns the original tensor object instead of allocating a new
+		tensor. In `dreamer4` [2], this behavior repeats per-sequence `time_lens` after spatial
+		packing so the hierarchical temporal transformer receives one length per packed token stream.
+
+	Examples
+	--------
+	This example simplifies the hierarchical temporal length expansion in `dreamer4` [2].
+
+	```python
+		from torch_einops_kit import repeat_interleave_to_match import torch
+
+		time_lens = torch.tensor([6, 12]) tokens = torch.randn(4, 32, 512)
+
+		h_net_lens = repeat_interleave_to_match(time_lens, tokens) assert h_net_lens.tolist() == [6,
+		6, 12, 12]
+	```
+
+	References
+	----------
+	[1] torch.Tensor.repeat_interleave - PyTorch documentation
+		https://pytorch.org/docs/stable/generated/torch.Tensor.repeat_interleave.html
+	[2] lucidrains/dreamer4 `dreamer4.py`
+		https://github.com/lucidrains/dreamer4/blob/main/dreamer4/dreamer4.py
+	"""
+	len_t: int = t.shape[dim]
+	len_target: int = target if isinstance(target, int) else target.shape[default(target_dim, dim)]
+
+	if len_t == len_target:
+		return t
+
+	if not divisible_by(len_target, len_t):
+		message: str = f'I received `{len_target = }` and `{len_t = }`, but I need `len_target` to be divisible by `len_t`.'
+		raise ValueError(message)
+
+	return t.repeat_interleave(len_target // len_t, dim=dim)
+
 """
-Some or all of the logic in this module may be protected by the following.
+Some of the logic in this module may be protected by the following.
 
 MIT License
 

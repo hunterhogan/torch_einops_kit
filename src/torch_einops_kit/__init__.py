@@ -144,7 +144,8 @@ from torch_einops_kit._slicing import (
 # isort: split
 from torch_einops_kit._dimensions import (
 	align_dims_left as align_dims_left, pad_left_ndim as pad_left_ndim, pad_left_ndim_to as pad_left_ndim_to, pad_ndim as pad_ndim,
-	pad_right_ndim as pad_right_ndim, pad_right_ndim_to as pad_right_ndim_to)
+	pad_right_ndim as pad_right_ndim, pad_right_ndim_to as pad_right_ndim_to,
+	pad_right_ndim_to_and_expand_as as pad_right_ndim_to_and_expand_as, repeat_interleave_to_match as repeat_interleave_to_match)
 
 # isort: split
 from torch_einops_kit._cat_and_stack import (

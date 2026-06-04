@@ -83,8 +83,7 @@ def divisible_by(num: float, den: float) -> bool:
 	num : float
 		The numerator to test.
 	den : float
-		The denominator. When `den` is `0`, `divisible_by` returns `False` without evaluating `num %
-		den`.
+		The denominator.
 
 	Returns
 	-------
