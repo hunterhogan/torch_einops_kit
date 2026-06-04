@@ -7,16 +7,16 @@ authors:
   family-names: Hogan
   email: HunterHogan@pm.me
 cff-version: 1.2.0
-commit: 066ac8fd90ca32c3f9483b1a080a0b285474fe83
+commit: f99455edce25395a846ac5f88ded8b1cd1af5a39
 contact:
 - given-names: Hunter
   family-names: Hogan
   email: HunterHogan@pm.me
-date-released: '2026-05-25'
+date-released: '2026-06-04'
 identifiers:
 - type: url
-  value: https://github.com/hunterhogan/torch_einops_kit/releases/tag/0.1.6
-  description: The URL for torch-einops-kit 0.1.6.
+  value: https://github.com/hunterhogan/torch_einops_kit/releases/tag/0.1.7
+  description: The URL for torch-einops-kit 0.1.7.
 keywords:
 - artificial intelligence
 - einops
@@ -26,9 +26,9 @@ keywords:
 license: CC-BY-NC-4.0
 message: Cite this software with the metadata in this file.
 repository: https://github.com/hunterhogan/torch_einops_kit.git
-repository-artifact: https://pypi.org/project/torch-einops-kit/0.1.6/
+repository-artifact: https://pypi.org/project/torch-einops-kit/0.1.7/
 repository-code: 
-  https://github.com/hunterhogan/torch_einops_kit/releases/tag/0.1.6
+  https://github.com/hunterhogan/torch_einops_kit/releases/tag/0.1.7
 title: torch-einops-kit
 url: https://github.com/hunterhogan/torch_einops_kit
-version: 0.1.6
+version: 0.1.7
