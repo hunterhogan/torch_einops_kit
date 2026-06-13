@@ -20,6 +20,7 @@ from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
 	from collections.abc import Callable, Iterable
+	from torch_einops_kit import 木
 
 def tree_map_tensor(fn: Callable[[Tensor], Tensor], tree: PyTree) -> PyTree:
 	"""Apply `fn` to every `torch.Tensor` leaf in `tree`, leaving non-tensor leaves unchanged.
@@ -88,7 +89,7 @@ def tree_map_tensor(fn: Callable[[Tensor], Tensor], tree: PyTree) -> PyTree:
 
 	return tree_map(func, tree)
 
-def tree_flatten_with_inverse(tree: PyTree) -> tuple[list[Any], Callable[[Iterable[Any]], PyTree]]:
+def tree_flatten_with_inverse(tree: 木) -> tuple[list[Any], Callable[[Iterable[Any]], 木]]:
 	"""Flatten `tree` into a list of leaves and return a paired inverse function.
 
 	You can use this function to decompose a nested PyTree [1] structure into a flat list of leaves

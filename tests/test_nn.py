@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from torch import nn, Tensor
-from torch_einops_kit.nn import Identity, Lambda, Sequential
+from torch_einops_kit.nn import Identity, Lambda, Residual, Sequential
 import torch
 
 def test_sequential() -> None:
@@ -26,6 +26,22 @@ def test_identity() -> None:
 	ident: Identity = Identity()
 	x: Tensor = torch.tensor([1.0, 2.0, 3.0])
 	assert torch.allclose(ident(x), x)
+
+def test_residual() -> None:
+	def fn(x: Tensor) -> Tensor:
+		return x * 2
+	res = Residual(fn)
+	x: Tensor = torch.tensor([1., 2., 3.])
+	assert torch.allclose(res(x), torch.tensor([3., 6., 9.]))
+
+	def fn_tuple(x: Tensor) -> tuple[Tensor, Tensor, dict[str, Tensor]]:
+		return x * 2, x * 3, dict(a=x * 4)
+
+	res_tuple = Residual(fn_tuple)
+	out1, out2, out3 = res_tuple(x)
+	assert torch.allclose(out1, torch.tensor([3., 6., 9.]))
+	assert torch.allclose(out2, torch.tensor([3., 6., 9.]))
+	assert torch.allclose(out3['a'], torch.tensor([4., 8., 12.]))
 
 """
 Some of the logic in this module may be protected by the following.

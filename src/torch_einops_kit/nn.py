@@ -16,8 +16,8 @@ Classes
 from __future__ import annotations
 
 from torch import nn
-from torch_einops_kit import compact, identity, PSpec, RVar
-from typing import Generic, TYPE_CHECKING
+from torch_einops_kit import compact, identity, PSpec, RVar, tree_flatten_with_inverse, TVar, 木
+from typing import Concatenate, Generic, TYPE_CHECKING
 
 if TYPE_CHECKING:
 	from collections.abc import Callable
@@ -150,6 +150,17 @@ class Lambda(nn.Module, Generic[PSpec, RVar]):
 			Value returned by `self.fn`.
 		"""
 		return self.fn(*args, **kwargs)
+
+class Residual(nn.Module, Generic[TVar, PSpec, 木]):  # noqa: D101
+    def __init__(self, fn: Callable[Concatenate[TVar, PSpec], 木]) -> None:
+        super().__init__()
+        self.fn: Callable[Concatenate[TVar, PSpec], 木] = fn
+
+    def forward(self, x: TVar, *args: PSpec.args, **kwargs: PSpec.kwargs) -> 木:  # noqa: D102
+        out: 木 = self.fn(x, *args, **kwargs)
+
+        (first, *rest), inverse = tree_flatten_with_inverse(out)
+        return inverse((first + x, *rest))
 
 """
 Some of the logic in this module may be protected by the following.

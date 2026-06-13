@@ -5,6 +5,34 @@ from torch_einops_kit.scaleValues import exclusive_cumsum, l2norm, masked_mean, 
 import pytest
 import torch
 
+SCALE_VALUES_TENSORS: dict[str, Tensor] = {
+	'rank-1-primes-a': torch.tensor([2.0, 3.0, 5.0, 7.0]),
+	'rank-1-primes-b': torch.tensor([11.0, 13.0, 17.0]),
+	'rank-2-primes-a': torch.tensor([[19.0, 23.0, 29.0], [31.0, 37.0, 41.0]]),
+	'rank-2-primes-b': torch.tensor([[43.0, 47.0, 53.0], [59.0, 61.0, 67.0]]),
+}
+
+SCALE_VALUES_EXPECTED_TENSORS: dict[str, Tensor] = {
+	'rank-1-primes-a-exclusive-trailing': torch.tensor([0.0, 2.0, 5.0, 10.0]),
+	'rank-1-primes-b-exclusive-leading': torch.tensor([0.0, 11.0, 24.0]),
+	'rank-1-primes-a-reverse-trailing-keepdim': torch.tensor([17.0, 15.0, 12.0, 7.0]),
+	'rank-1-primes-b-reverse-leading-no-keepdim': torch.tensor([41.0, 30.0, 17.0]),
+	'rank-2-primes-a-exclusive-trailing': torch.tensor([[0.0, 19.0, 42.0], [0.0, 31.0, 68.0]]),
+	'rank-2-primes-a-reverse-trailing-keepdim': torch.tensor([[71.0, 52.0, 29.0], [109.0, 78.0, 41.0]]),
+	'rank-2-primes-b-exclusive-leading': torch.tensor([[0.0, 0.0, 0.0], [43.0, 47.0, 53.0]]),
+	'rank-2-primes-b-reverse-leading-no-keepdim': torch.tensor([[102.0, 108.0, 120.0], [59.0, 61.0, 67.0]]),
+}
+
+@pytest.fixture
+def scale_values_tensor(request: pytest.FixtureRequest) -> Tensor:
+	tensor_key: str = request.param
+	return SCALE_VALUES_TENSORS[tensor_key]
+
+@pytest.fixture
+def scale_values_expected_tensor(request: pytest.FixtureRequest) -> Tensor:
+	expected_tensor_key: str = request.param
+	return SCALE_VALUES_EXPECTED_TENSORS[expected_tensor_key]
+
 @pytest.mark.parametrize(
 	('scale_values_tensor', 'reductionDim', 'scale_values_expected_tensor'),
 	[

@@ -1,12 +1,14 @@
-# ruff: noqa: E224
+# ruff: noqa: E224 PLC2701
 from __future__ import annotations
 
 from os import PathLike
 from torch.nn import Module
-from typing import Any, Literal, overload, ParamSpec, Protocol, TYPE_CHECKING, TypeAlias, TypedDict, TypeVar
+from torch.utils._pytree import PyTree
+from typing import Any, overload, ParamSpec, Protocol, TYPE_CHECKING, TypedDict, TypeVar
 
 if TYPE_CHECKING:
 	from torch import Tensor
+	from typing import Literal, TypeAlias
 
 ConfigArgsKwargs:	TypeAlias = tuple[tuple[Any, ...], dict[Any, Any]]
 """Represent the positional arguments and keyword arguments of a decorated constructor.
@@ -176,6 +178,7 @@ References
 
 [7] torch_einops_kit.first
 """
+木 = TypeVar('木', bound=PyTree)
 
 class DehydratedCheckpoint(TypedDict):
 	"""Represent the checkpoint dictionary written and read by the `save_load` decorator.

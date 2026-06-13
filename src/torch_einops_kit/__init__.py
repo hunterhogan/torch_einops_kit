@@ -129,7 +129,7 @@ from torch_einops_kit._theTypes import (
 	ConfigArgsKwargs as ConfigArgsKwargs, DehydratedCheckpoint as DehydratedCheckpoint, DehydratedTorchNNModule as DehydratedTorchNNModule,
 	DimAndValue as DimAndValue, IdentityCallable as IdentityCallable, InversePackListTensors as InversePackListTensors,
 	InversePackTensor as InversePackTensor, PSpec as PSpec, RVar as RVar, StrPath as StrPath, SupportsIntIndex as SupportsIntIndex,
-	T_co as T_co, TorchNNModule as TorchNNModule, TVar as TVar)
+	T_co as T_co, TorchNNModule as TorchNNModule, TVar as TVar, 木 as 木)
 
 # isort: split
 from torch_einops_kit._helpers import (

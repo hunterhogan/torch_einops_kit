@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from operator import is_
 from torch import nn, Tensor
 from torch_einops_kit.nn import Identity, Lambda, Sequential
 from typing import TYPE_CHECKING
@@ -9,58 +10,65 @@ import torch
 if TYPE_CHECKING:
 	from collections.abc import Callable
 
-@pytest.mark.parametrize('identity_case_label', [pytest.param('ignores-extra-arguments', id='ignores-extra-arguments')])
-def test_identity_returns_first_argument_unchanged(
-	identity_call_arguments: tuple[Tensor, tuple[Tensor, str], dict[str, str | int]], identity_case_label: str
-) -> None:
+def _lambda_affine_with_bias_tensor(tensor_value: Tensor, bias_tensor: Tensor, *, scale: float) -> Tensor:
+	return tensor_value.to(dtype=torch.float64) * scale + bias_tensor.to(dtype=torch.float64)
+
+@pytest.fixture
+def identity_call_arguments(t: Tensor) -> tuple[Tensor, tuple[Tensor, str], dict[str, str | int]]:
+	extra_tensor = torch.full_like(t, 89)
+	extra_args: tuple[Tensor, str] = (extra_tensor, 'north')
+	extra_kwargs: dict[str, str | int] = {'marker': 'east', 'count': 13}
+	return t, extra_args, extra_kwargs
+
+@pytest.fixture
+def lambda_unary_function() -> Callable[[Tensor], Tensor]:
+	def transform_tensor(tensor_value: Tensor) -> Tensor:
+		return tensor_value.to(dtype=torch.float64) * 2.0 + 13.0
+
+	return transform_tensor
+
+@pytest.fixture
+def lambda_invocation_case(t: Tensor) -> tuple[Callable[..., Tensor], tuple[Tensor, Tensor], dict[str, float], Tensor]:
+	bias_tensor = torch.full_like(t, 21, dtype=torch.float64)
+	args: tuple[Tensor, Tensor] = (t, bias_tensor)
+	kwargs: dict[str, float] = {'scale': 2.0}
+	expected_tensor = _lambda_affine_with_bias_tensor(*args, **kwargs)
+	return _lambda_affine_with_bias_tensor, args, kwargs, expected_tensor
+
+@pytest.fixture
+def sequential_case(t: Tensor, lambda_unary_function: Callable[[Tensor], Tensor]) -> tuple[tuple[nn.Module | None, ...], Tensor, Tensor]:
+	modules: tuple[nn.Module | None, ...] = (Identity(), None, Lambda(lambda_unary_function), None)
+	expected_tensor = lambda_unary_function(t)
+	return modules, t, expected_tensor
+
+@pytest.mark.parametrize('label', [pytest.param('ignores-extra-arguments', id='ignores-extra-arguments')])
+def test_Identity(identity_call_arguments: tuple[Tensor, tuple[Tensor, str], dict[str, str | int]], label: str) -> None:
 	identity_module = Identity()
 	primary_input, extra_args, extra_kwargs = identity_call_arguments
 	result = identity_module(primary_input, *extra_args, **extra_kwargs)
 
-	assert result is primary_input, (
-		f'Identity returned object id {id(result)}, expected the original object id {id(primary_input)} for {identity_case_label}.'
-	)
-	assert torch.equal(result, primary_input), (
-		f'Identity returned tensor values {result}, expected {primary_input} for {identity_case_label}.'
-	)
+	assert result is primary_input, f'{id(result)=}, expected the original object id {id(primary_input)} for {label}.'
+	assert torch.equal(result, primary_input), f'{result=}, expected {primary_input} for {label}.'
 
-@pytest.mark.parametrize('lambda_case_label', [pytest.param('forwards-args-and-kwargs', id='forwards-args-and-kwargs')])
-def test_lambda_calls_wrapped_function(
-	lambda_invocation_case: tuple[Callable[..., Tensor], tuple[Tensor, Tensor], dict[str, float], Tensor], lambda_case_label: str
-) -> None:
+@pytest.mark.parametrize('label', [pytest.param('forwards-args-and-kwargs', id='forwards-args-and-kwargs')])
+def test_Lambda(lambda_invocation_case: tuple[Callable[..., Tensor], tuple[Tensor, Tensor], dict[str, float], Tensor], label: str) -> None:
 	wrapped_function, args, kwargs, expected_tensor = lambda_invocation_case
 	lambda_module: Lambda[..., Tensor] = Lambda(wrapped_function)
 	result = lambda_module(*args, **kwargs)
 
-	assert lambda_module.fn is wrapped_function, (
-		f'Lambda stored callable {lambda_module.fn!r}, expected {wrapped_function!r} for {lambda_case_label}.'
-	)
-	assert torch.equal(result, expected_tensor), f'Lambda returned tensor {result}, expected {expected_tensor} for {lambda_case_label}.'
+	assert lambda_module.fn is wrapped_function, f'{lambda_module.fn=}, expected {wrapped_function!r} for {label}.'
+	assert torch.equal(result, expected_tensor), f'{result=}, expected {expected_tensor} for {label}.'
 
-@pytest.mark.parametrize('sequential_case_label', [pytest.param('filters-none-and-preserves-order', id='filters-none-and-preserves-order')])
-def test_sequential_filters_none_modules_and_runs_remaining_modules(
-	sequential_case: tuple[tuple[nn.Module | None, ...], Tensor, Tensor], sequential_case_label: str
-) -> None:
+@pytest.mark.parametrize('label', [pytest.param('filters-none-and-preserves-order', id='filters-none-and-preserves-order')])
+def test_Sequential(sequential_case: tuple[tuple[nn.Module | None, ...], Tensor, Tensor], label: str) -> None:
 	modules, input_tensor, expected_tensor = sequential_case
 	sequential_module = Sequential(*modules)
-	expected_filtered_modules = tuple(module for module in modules if module is not None)
-	actual_modules = tuple(sequential_module.children())
+	expected = tuple(filter(None, modules))
+	actual = tuple(sequential_module.children())
 	result = sequential_module(input_tensor)
 
-	assert isinstance(sequential_module, nn.Sequential), (
-		f'Sequential returned {type(sequential_module).__name__}, expected Sequential for {sequential_case_label}.'
-	)
-	assert len(actual_modules) == len(expected_filtered_modules), (
-		f'Sequential kept {len(actual_modules)} modules, expected {len(expected_filtered_modules)} for {sequential_case_label}.'
-	)
-	assert all(module is not None for module in actual_modules), (
-		f'Sequential retained a None module for {sequential_case_label}: {actual_modules!r}.'
-	)
-	assert all(
-		actual_module is expected_module for actual_module, expected_module in zip(actual_modules, expected_filtered_modules, strict=True)
-	), (
-		f'Sequential changed module order or instances for {sequential_case_label}: got {actual_modules!r}, expected {expected_filtered_modules!r}.'
-	)
-	assert torch.equal(result, expected_tensor), (
-		f'Sequential returned tensor {result}, expected {expected_tensor} for {sequential_case_label}.'
-	)
+	assert isinstance(sequential_module, nn.Sequential), f'{type(sequential_module).__name__=}, expected Sequential for {label}.'
+	assert len(actual) == len(expected), f'{len(actual)=}, expected {len(expected)} for {label}.'
+	assert all(module is not None for module in actual), f'{actual=}, expected all modules to be non-None for {label}.'
+	assert all(map(is_, actual, expected)), f'{label=}: {actual=}, {expected=}.'
+	assert torch.equal(result, expected_tensor), f'{result=}, expected {expected_tensor} for {label}.\n'

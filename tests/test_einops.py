@@ -9,6 +9,16 @@ import torch
 if TYPE_CHECKING:
 	from collections.abc import Sequence
 
+EINOPS_PACK_PATTERN_CASES: list[object] = [pytest.param('*', id='pattern-star')]
+
+@pytest.fixture(params=EINOPS_PACK_PATTERN_CASES)
+def einops_pack_one_pattern(request: pytest.FixtureRequest) -> str:
+	return request.param
+
+@pytest.fixture
+def pack_one_result(t: Tensor, einops_pack_one_pattern: str) -> tuple[Tensor, Sequence[tuple[int, ...] | list[int]]]:
+	return pack_one(t, einops_pack_one_pattern)
+
 @pytest.mark.parametrize(('pattern', 'tensor_shift'), [pytest.param('b *', 7.0, id='pattern-b-star-shift-seven')])
 def test_pack_with_inverse_round_trip_for_tensor_and_sequence(pack_input: Tensor | list[Tensor], pattern: str, tensor_shift: float) -> None:
 	if torch.is_tensor(pack_input):
