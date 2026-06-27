@@ -1,3 +1,4 @@
+# ruff: noqa: D101, D102
 """Construct `nn.Sequential` instances and adapt callables to the `nn.Module` interface.
 
 Contents
@@ -15,12 +16,56 @@ Classes
 
 from __future__ import annotations
 
+from functools import partial
+from operator import methodcaller
 from torch import nn
-from torch_einops_kit import compact, identity, PSpec, RVar, tree_flatten_with_inverse, TVar, 木
-from typing import Concatenate, Generic, TYPE_CHECKING
+from torch_einops_kit import compact, exists, identity, PSpec, RVar, tree_flatten_with_inverse, TVar, 木
+from typing import Generic, overload, TYPE_CHECKING
 
 if TYPE_CHECKING:
-	from collections.abc import Callable
+	from collections.abc import Callable, Iterator
+	from torch_einops_kit import CountParametersPartial, TorchNNModule, 形num_parameters
+	from typing import Concatenate
+
+@overload
+def count_parameters(model_or_class: type[形num_parameters], *, requires_grad: bool | None = None) -> type[形num_parameters]: ...
+@overload
+def count_parameters(model_or_class: type[TorchNNModule], *, requires_grad: bool | None = None) -> type[TorchNNModule]: ...
+@overload
+def count_parameters(model_or_class: None = None, *, requires_grad: bool | None = None) -> CountParametersPartial: ...
+@overload
+def count_parameters(model_or_class: TorchNNModule, *, requires_grad: bool | None = None) -> int: ...
+def count_parameters(
+	model_or_class: type[形num_parameters | TorchNNModule] | TorchNNModule | None = None
+	, *
+	, requires_grad: bool | None = None
+) -> type[TorchNNModule | 形num_parameters] | int | CountParametersPartial:
+	"""IDK.
+
+	There's only so much I can do without changing the API.
+
+	Returns
+	-------
+	count : int
+		Number of parameters in `model_or_class` that satisfy `requires_grad`, or the number of parameters in `model_or_class` if `requires_grad` is `None`.
+	"""
+	def doCount(model: TorchNNModule) -> int:
+		countMe: Iterator[nn.Parameter] = model.parameters()
+		if exists(requires_grad):
+			countMe = filter(lambda p: p.requires_grad == requires_grad, countMe)
+		return sum(map(methodcaller('numel'), countMe))
+
+	def addProperty(model: type[形num_parameters | TorchNNModule]) -> type[形num_parameters | TorchNNModule]:
+		setattr(model, 'num_parameters', property(doCount))  # noqa: B010
+		return model
+
+	if isinstance(model_or_class, type) and issubclass(model_or_class, nn.Module):
+		return addProperty(model_or_class)
+
+	if not exists(model_or_class):
+		return partial(count_parameters, requires_grad=requires_grad)
+
+	return doCount(model_or_class)
 
 def Sequential(*modules: nn.Module | None) -> nn.Sequential:
 	"""Construct an `nn.Sequential` instance from `modules`, ignoring each value that is `None`.
@@ -151,16 +196,16 @@ class Lambda(nn.Module, Generic[PSpec, RVar]):
 		"""
 		return self.fn(*args, **kwargs)
 
-class Residual(nn.Module, Generic[TVar, PSpec, 木]):  # noqa: D101
-    def __init__(self, fn: Callable[Concatenate[TVar, PSpec], 木]) -> None:
-        super().__init__()
-        self.fn: Callable[Concatenate[TVar, PSpec], 木] = fn
+class Residual(nn.Module, Generic[TVar, PSpec, 木]):
+	def __init__(self, fn: Callable[Concatenate[TVar, PSpec], 木]) -> None:
+		super().__init__()
+		self.fn: Callable[Concatenate[TVar, PSpec], 木] = fn
 
-    def forward(self, x: TVar, *args: PSpec.args, **kwargs: PSpec.kwargs) -> 木:  # noqa: D102
-        out: 木 = self.fn(x, *args, **kwargs)
+	def forward(self, x: TVar, *args: PSpec.args, **kwargs: PSpec.kwargs) -> 木:
+		out: 木 = self.fn(x, *args, **kwargs)
 
-        (first, *rest), inverse = tree_flatten_with_inverse(out)
-        return inverse((first + x, *rest))
+		(first, *rest), inverse = tree_flatten_with_inverse(out)
+		return inverse((first + x, *rest))
 
 """
 Some of the logic in this module may be protected by the following.

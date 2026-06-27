@@ -1,7 +1,9 @@
-# ruff: noqa: E224 PLC2701
+# ruff: noqa: PLC2701
 from __future__ import annotations
 
+from abc import abstractmethod
 from os import PathLike
+from torch import nn
 from torch.nn import Module
 from torch.utils._pytree import PyTree
 from typing import Any, overload, ParamSpec, Protocol, TYPE_CHECKING, TypedDict, TypeVar
@@ -37,7 +39,7 @@ References
 
 [4] torch_einops_kit.save_load.rehydrate_config
 """
-PSpec =				ParamSpec("PSpec")
+PSpec = ParamSpec("PSpec")
 """Capture the full parameter specification of a callable for higher-order type signatures.
 
 `PSpec` is a `ParamSpec` [1] that preserves the complete parameter signature of a callable through
@@ -60,7 +62,7 @@ References
 
 [4] torch_einops_kit.maybe
 """
-RVar =				TypeVar("RVar")
+RVar = TypeVar("RVar")
 """Represent a generic return type in higher-order callable signatures.
 
 `RVar` is an unconstrained `TypeVar` [1] used to annotate the return type of an inner callable in
@@ -80,7 +82,7 @@ References
 
 [3] torch_einops_kit.TVar
 """
-StrPath:			TypeAlias =	str | PathLike[str]
+StrPath:			TypeAlias = str | PathLike[str]
 """Accept either a `str` or a `PathLike[str]` filesystem path value.
 
 `StrPath` is a `TypeAlias` for `str | PathLike[str]` [1], intentionally copying the definition of
@@ -99,7 +101,7 @@ References
 	https://docs.python.org/3/library/pathlib.html#pathlib.Path
 [4] torch_einops_kit.save_load.save_load
 """
-T_co =				TypeVar("T_co", covariant=True)
+T_co = TypeVar("T_co", covariant=True)
 """Represent a covariant element type in read-only container protocols.
 
 `T_co` is a covariant `TypeVar` [1] used in container protocols and functions that produce but do not
@@ -120,7 +122,7 @@ References
 
 [3] torch_einops_kit.compact
 """
-TorchNNModule =		TypeVar("TorchNNModule", bound=Module)
+TorchNNModule = TypeVar("TorchNNModule", bound=Module)
 """Represent a concrete `torch.nn.Module` subclass in decorator and method signatures.
 
 `TorchNNModule` is a `TypeVar` [1] bound to `torch.nn.Module` [2] that lets static analyzers track
@@ -145,7 +147,7 @@ References
 
 [4] torch_einops_kit.device.move_inputs_to_module_device
 """
-TVar =				TypeVar("TVar")
+TVar = TypeVar("TVar")
 """Represent an unconstrained generic type for identity-preserving operations.
 
 `TVar` is an unconstrained `TypeVar` [1] used to annotate functions and protocols that accept a value
@@ -432,3 +434,20 @@ class SupportsIntIndex(Protocol[T_co]):
 	[2] torch_einops_kit.first
 	"""
 	def __getitem__(self, index: int, /) -> T_co: ...
+
+class IHave_num_parameters(nn.Module):
+	@property
+	@abstractmethod
+	def num_parameters(self) -> int: ...
+
+形num_parameters = TypeVar("形num_parameters", bound=IHave_num_parameters)
+
+class CountParametersPartial(Protocol):
+	@overload
+	def __call__(self, model_or_class: type[形num_parameters]) -> type[形num_parameters]: ...
+	@overload
+	def __call__(self, model_or_class: type[TorchNNModule]) -> type[TorchNNModule]: ...
+	@overload
+	def __call__(self, model_or_class: 形num_parameters) -> int: ...
+	@overload
+	def __call__(self, model_or_class: TorchNNModule) -> int: ...

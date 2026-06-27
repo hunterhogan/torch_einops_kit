@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from einops import rearrange
 from functools import reduce
-from torch import arange, Tensor
+from torch import arange
 from torch_einops_kit import exists, safe, shift_left, shift_right
 from torch_einops_kit.scaleValues import reverse_cumsum
 from typing import TYPE_CHECKING
@@ -10,6 +10,7 @@ import torch
 
 if TYPE_CHECKING:
 	from collections.abc import Callable, Sequence
+	from torch import Tensor
 	from torch.types import Number
 
 def and_masks(masks: Sequence[Tensor | None]) -> Tensor | None:

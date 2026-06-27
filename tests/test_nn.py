@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from torch import nn, Tensor
-from torch_einops_kit.nn import Identity, Lambda, Residual, Sequential
+from torch_einops_kit.nn import count_parameters, Identity, Lambda, Residual, Sequential
 import torch
 
 def test_sequential() -> None:
@@ -42,6 +42,38 @@ def test_residual() -> None:
 	assert torch.allclose(out1, torch.tensor([3., 6., 9.]))
 	assert torch.allclose(out2, torch.tensor([3., 6., 9.]))
 	assert torch.allclose(out3['a'], torch.tensor([4., 8., 12.]))
+
+def test_count_parameters() -> None:
+	model: nn.Linear = nn.Linear(10, 10)
+	assert count_parameters(model) == 110
+
+	# Test requires_grad filter
+	model.bias.requires_grad_(False)
+	assert count_parameters(model) == 110
+	assert count_parameters(model, requires_grad=True) == 100
+	assert count_parameters(model, requires_grad=False) == 10
+
+	# Test as a decorator
+	@count_parameters
+	class MyModel(nn.Module):
+		def __init__(self) -> None:
+			super().__init__()
+			self.linear: nn.Linear = nn.Linear(10, 10)
+			self.linear.bias.requires_grad_(False)
+
+	my_model: MyModel = MyModel()
+	assert my_model.num_parameters == 110
+
+	# Test as a decorator with kwargs
+	@count_parameters(requires_grad=True)
+	class MyModelTrainable(nn.Module):
+		def __init__(self) -> None:
+			super().__init__()
+			self.linear: nn.Linear = nn.Linear(10, 10)
+			self.linear.bias.requires_grad_(False)
+
+	my_model_trainable: MyModelTrainable = MyModelTrainable()
+	assert my_model_trainable.num_parameters == 100
 
 """
 Some of the logic in this module may be protected by the following.

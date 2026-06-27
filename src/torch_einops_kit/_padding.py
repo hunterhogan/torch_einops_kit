@@ -1,15 +1,17 @@
 from __future__ import annotations
 
 from hunterMakesPy import decreasing, zeroIndexed
-from torch import cat, stack, Tensor, tensor
+from torch import cat, stack, tensor
 from torch_einops_kit import DimAndValue, first
-from typing import Literal, overload, TYPE_CHECKING
+from typing import overload, TYPE_CHECKING
 from typing_extensions import Unpack
 import torch
 import torch.nn.functional as F
 
 if TYPE_CHECKING:
 	from collections.abc import Callable, Sequence
+	from torch import Tensor
+	from typing import Literal
 
 def pad_at_dim(t: Tensor, pad: tuple[int, int], *, dim: int = -1, value: float = 0.0) -> Tensor:
 	"""Pad `t` along `dim`, inserting `value` at each end by the amounts in `pad`.

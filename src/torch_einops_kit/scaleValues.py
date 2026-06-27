@@ -25,11 +25,14 @@ Classes
 
 from __future__ import annotations
 
-from torch import nn, SymInt, Tensor
-from torch.nn import Module
+from torch import nn
 from torch_einops_kit import exists, pad_right_ndim
+from typing import TYPE_CHECKING
 import torch
 import torch.nn.functional as F
+
+if TYPE_CHECKING:
+	from torch import SymInt, Tensor
 
 def exclusive_cumsum(t: Tensor, dim: int = -1) -> Tensor:
 	"""Compute the exclusive prefix sum of `Tensor` `t` along its dimension `dim`.
@@ -258,7 +261,7 @@ def reverse_cumsum(t: Tensor, dim: int = -1, *, keepdim: bool = True) -> Tensor:
 	"""
 	return t.sum(dim=dim, keepdim=keepdim) - t.cumsum(dim=dim) + t
 
-class RMSNorm(Module):
+class RMSNorm(nn.Module):
 	"""Normalize feature vectors with root-mean-square scaling and a learned rescaling parameter.
 
 	You can use `RMSNorm` as a pre-normalization layer before attention, feedforward, or linear

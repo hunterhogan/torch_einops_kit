@@ -25,12 +25,13 @@ References
 from __future__ import annotations
 
 from einops import pack, unpack
-from torch import is_tensor, Tensor
+from torch import is_tensor
 from torch_einops_kit import default, first
 from typing import overload, TYPE_CHECKING
 
 if TYPE_CHECKING:
 	from collections.abc import Sequence
+	from torch import Tensor
 	from torch_einops_kit import InversePackListTensors, InversePackTensor
 
 def pack_one(t: Tensor, pattern: str) -> tuple[Tensor, Sequence[tuple[int, ...] | list[int]]]:

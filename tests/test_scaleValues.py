@@ -124,6 +124,32 @@ def test_masked_mean(t: Tensor, boolean_mask_like_t: Tensor, reduction_dim: int 
 		f'for {tuple(t.shape)=}, {tuple(mask_value.shape)=}, and {reduction_dim=}.'
 	)
 
+
+@pytest.mark.parametrize('eps', [pytest.param(1e-5, id='eps-default')])
+def test_masked_mean_with_none_mask(t: Tensor, reduction_dim: int | None, eps: float) -> None:
+	"""Ensure masked_mean falls back to the unmasked mean when mask is None.
+
+	This exercises the branch in scaleValues.masked_mean where a None mask is replaced
+	with a boolean tensor of all True values via torch.ones_like.
+	"""
+	tensor_value = t.to(dtype=torch.float64)
+
+	if reduction_dim is None:
+		expected = tensor_value.mean()
+	else:
+		expected = tensor_value.mean(dim=reduction_dim)
+
+	result = masked_mean(tensor_value, mask=None, dim=reduction_dim, eps=eps)
+
+	assert result.shape == expected.shape, (
+		f'masked_mean returned shape {tuple(result.shape)}, expected {tuple(expected.shape)} '
+		f'for {tuple(t.shape)=} and {reduction_dim=} when mask is None.'
+	)
+	assert torch.allclose(result, expected), (
+		f'masked_mean returned values {result} that do not match expected {expected} '
+		f'for {tuple(t.shape)=} and {reduction_dim=} when mask is None.'
+	)
+
 @pytest.mark.parametrize(
 	('tensor_dtype', 'tolerance'), [pytest.param(torch.float32, 1e-5, id='float32'), pytest.param(torch.float64, 1e-10, id='float64')]
 )

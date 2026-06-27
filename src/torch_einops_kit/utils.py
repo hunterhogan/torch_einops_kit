@@ -14,13 +14,16 @@ Functions
 
 from __future__ import annotations
 
-from torch import is_tensor, Tensor
-from torch.utils._pytree import PyTree, tree_flatten, tree_map, tree_unflatten  # noqa: PLC2701
-from typing import Any, TYPE_CHECKING
+from torch import is_tensor
+from torch.utils._pytree import tree_flatten, tree_map, tree_unflatten  # noqa: PLC2701
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
 	from collections.abc import Callable, Iterable
+	from torch import Tensor
+	from torch.utils._pytree import PyTree
 	from torch_einops_kit import 木
+	from typing import Any
 
 def tree_map_tensor(fn: Callable[[Tensor], Tensor], tree: PyTree) -> PyTree:
 	"""Apply `fn` to every `torch.Tensor` leaf in `tree`, leaving non-tensor leaves unchanged.

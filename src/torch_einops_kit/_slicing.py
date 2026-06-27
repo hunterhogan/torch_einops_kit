@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from torch import Tensor
 from torch_einops_kit import exists
+from typing import TYPE_CHECKING
 import torch
+
+if TYPE_CHECKING:
+	from torch import Tensor
 
 def shape_with_replace(t: Tensor, replace_dict: dict[int, int] | None = None) -> torch.Size:
 	"""Return the shape of a tensor with selected dimension sizes replaced by new values.

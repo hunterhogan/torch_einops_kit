@@ -22,15 +22,16 @@ from __future__ import annotations
 from functools import wraps
 from pathlib import Path
 from torch.nn import Module
-from torch_einops_kit import (
-	ConfigArgsKwargs, DehydratedCheckpoint, DehydratedTorchNNModule, exists, map_values, StrPath, TorchNNModule, TVar)
-from typing import Any, cast, overload, TYPE_CHECKING
+from torch_einops_kit import DehydratedCheckpoint, DehydratedTorchNNModule, exists, map_values
+from typing import cast, overload, TYPE_CHECKING
 import pickle
 import torch
 import warnings
 
 if TYPE_CHECKING:
 	from collections.abc import Callable
+	from torch_einops_kit import ConfigArgsKwargs, StrPath, TorchNNModule, TVar
+	from typing import Any
 
 def dehydrate_config(config: TVar, config_instance_var_name: str) -> TVar:
 	"""Convert nested decorated modules in `config` into reconstruction records.
@@ -320,8 +321,8 @@ def save_load(
 
 		path = Path('test_model_init.pt')
 		model = SimpleNet(10, 20)
-		model.save(str(path))
-		restored_model = SimpleNet.init_and_load(str(path))
+		model.save(path)
+		restored_model = SimpleNet.init_and_load(path)
 	```
 
 	From `tests.test_save_load_extended` [8]:
@@ -417,9 +418,9 @@ def save_load(
 				model=self.state_dict(), config=pickle.dumps(dehydrate_config(config, config_instance_var_name)), version=version
 			)
 
-			torch.save(pkg, str(path))
+			torch.save(pkg, path)
 
-		def _load(self: TorchNNModule, path: StrPath | Path, *, strict: bool = True) -> None:
+		def _load(self: TorchNNModule, path: StrPath, *, strict: bool = True) -> None:
 			"""Restore model state from a checkpoint file.
 
 			You can use this method to load parameter values into an already-constructed decorated
@@ -428,7 +429,7 @@ def save_load(
 
 			Parameters
 			----------
-			path : StrPath | Path
+			path : StrPath
 				The filesystem path to read the checkpoint from.
 			strict : bool = True
 				Forwarded to `load_state_dict`. When `True`, the key sets of the checkpoint and the
@@ -455,7 +456,7 @@ def save_load(
 				message: str = f'I received `{path = }`, but no file exists at that path.'
 				raise FileNotFoundError(message)
 
-			pkg: DehydratedCheckpoint = torch.load(str(path), map_location='cpu')
+			pkg: DehydratedCheckpoint = torch.load(path, map_location='cpu')
 
 			if exists(version) and exists(pkg['version']) and (version != pkg['version']):
 				message: str = (
@@ -466,7 +467,7 @@ def save_load(
 			self.load_state_dict(pkg['model'], strict=strict)
 
 		@classmethod
-		def _init_and_load_from(cls: type[TorchNNModule], path: StrPath | Path, *, strict: bool = True) -> TorchNNModule:
+		def _init_and_load_from(cls: type[TorchNNModule], path: StrPath, *, strict: bool = True) -> TorchNNModule:
 			"""Construct a new instance of the decorated class and restore its state from a checkpoint file.
 
 			You can use this classmethod to reconstruct a model that was previously saved with the
@@ -476,7 +477,7 @@ def save_load(
 
 			Parameters
 			----------
-			path : StrPath | Path
+			path : StrPath
 				The filesystem path to read the checkpoint from.
 			strict : bool = True
 				Forwarded to `load_state_dict`. When `True`, the key sets of the checkpoint and the
@@ -502,7 +503,7 @@ def save_load(
 			if not path.exists():
 				message: str = f'I received `{path = }`, but no file exists at that path.'
 				raise FileNotFoundError(message)
-			pkg: DehydratedCheckpoint = torch.load(str(path), map_location='cpu')
+			pkg: DehydratedCheckpoint = torch.load(path, map_location='cpu')
 
 			if 'config' not in pkg:
 				message: str = 'model configs were not found in this saved checkpoint'

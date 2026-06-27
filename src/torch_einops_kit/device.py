@@ -22,14 +22,16 @@ from __future__ import annotations
 
 from functools import wraps
 from itertools import chain
-from torch_einops_kit import exists, PSpec, TorchNNModule, tree_map_tensor, TVar
-from typing import Concatenate, TYPE_CHECKING
+from torch_einops_kit import exists, tree_map_tensor
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
 	from collections.abc import Callable
 	from torch import device, Tensor
 	from torch.nn import Module
 	from torch.types import Device
+	from torch_einops_kit import PSpec, TorchNNModule, TVar
+	from typing import Concatenate
 
 def module_device(m: Module) -> device | None:
 	"""Infer the `torch.device` of a `torch.nn.Module` instance from its first `torch.nn.Parameter` or registered `torch.Tensor` buffer.

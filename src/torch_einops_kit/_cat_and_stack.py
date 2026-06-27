@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from torch import broadcast_tensors, cat, stack, Tensor  # pyright: ignore[reportUnknownVariableType]
+from torch import broadcast_tensors, cat, stack  # pyright: ignore[reportUnknownVariableType]
 from torch_einops_kit import safe
 from typing import cast, TYPE_CHECKING
 
 if TYPE_CHECKING:
 	from collections.abc import Sequence
+	from torch import Tensor
 
 def broadcast_cat(tensors: Sequence[Tensor], dim: int = -1) -> Tensor:
 	"""Broadcast tensor groups before concatenation.

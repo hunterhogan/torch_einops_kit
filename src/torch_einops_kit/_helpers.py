@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import Concatenate, overload, TYPE_CHECKING, TypeGuard
+from typing import overload, TYPE_CHECKING
 
 if TYPE_CHECKING:
 	from collections.abc import Callable, Iterable, Sequence
 	from torch import Tensor
 	from torch_einops_kit import IdentityCallable, PSpec, RVar, SupportsIntIndex, T_co, TVar
+	from typing import Concatenate, TypeGuard
 
 def compact(arr: Iterable[T_co | None]) -> list[T_co]:
 	"""Filter `None` values from `arr` and return the remaining elements as a `list`.
@@ -198,15 +199,15 @@ def map_values(fn: Callable[[TVar], TVar], v: TVar) -> TVar:
 
 	Parameters
 	----------
-	fn : Callable[[TVar], TVar]
+	fn : Callable[[T_co | dict[Any, T_co]], T_co]
 		The function to apply to each leaf value. `fn` receives each non-container value and must
 		return a value of the same type.
-	v : TVar
+	v : T_co | list[T_co] | tuple[T_co, ...] | dict[Any, T_co]
 		The value to transform. May be a `list`, `tuple`, `dict`, or any leaf value.
 
 	Returns
 	-------
-	transformed : TVar
+	transformed : T_co
 		The input structure with all leaf values replaced by the results of `fn`.
 
 	See Also
@@ -223,10 +224,10 @@ def map_values(fn: Callable[[TVar], TVar], v: TVar) -> TVar:
 	[3] tests.test_helpers.test_map_values_transforms_structure
 	"""
 	if isinstance(v, (list, tuple)):
-		return type(v)(map_values(fn, el) for el in v)  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]
+		return type(v)(map_values(fn, el) for el in v)  # pyright: ignore[reportUnknownVariableType, reportUnknownArgumentType]  # ty:ignore[invalid-argument-type]
 
 	if isinstance(v, dict):
-		v = {key: map_values(fn, val) for key, val in v.items()}  # pyright: ignore[reportAssignmentType, reportUnknownArgumentType, reportUnknownVariableType]  # ty:ignore[invalid-assignment]
+		v = {key: map_values(fn, val) for key, val in v.items()}  # pyright: ignore[reportAssignmentType, reportUnknownArgumentType, reportUnknownVariableType]  # ty:ignore[invalid-assignment, invalid-argument-type]
 
 	return fn(v)
 
