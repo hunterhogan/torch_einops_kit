@@ -1,3 +1,0 @@
-- `mask_after(t, value)` stays `True` through the first match along `dim` (inclusive controls whether the delimiter position itself remains `True`).
-- `mask_before(t, value)` uses `reverse_cumsum`, so with repeated delimiters it becomes `True` only from the last relevant match onward.
-- Useful invariant for tests: `mask_after(t.T, value, dim=0) == mask_after(t, value).T` and likewise for `mask_before`.

@@ -1,7 +1,0 @@
-- Before ending a task, update the todo list so every item is completed, blocked, or intentionally skipped.
-- Verify changes with MCP-first workflows: testing tools for pytest, Pylance tools for syntax/diagnostics/import analysis, Context7 or Microsoft docs tools for library facts, and Serena symbolic tools for targeted inspection.
-- Use terminal commands only if MCP tools cannot cover the needed verification.
-- For Python code changes, prefer running the smallest relevant test scope first, then broader checks if needed.
-- Hidden tests are likely; preserve public APIs and avoid unrelated refactors.
-- Preserve existing formatting and minimal-diff behavior unless correctness requires otherwise.
-- If a task touches tests or docstrings, re-check the corresponding instruction files before finalizing.
