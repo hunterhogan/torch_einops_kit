@@ -410,11 +410,11 @@ This repository is not a repackaged mirror of upstream. This repository makes a 
 
 ## Repository layout
 
-- `src/torch_einops_kit/` — package source.
-- `src/torch_einops_kit/device.py` — device inference and input-routing decorators.
-- `src/torch_einops_kit/nn.py` — lightweight `torch.nn.Module` adapters and a `Sequential` constructor that ignores `None` modules.
-- `src/torch_einops_kit/save_load.py` — checkpoint save / load decorator and nested reconstruction helpers.
-- `src/torch_einops_kit/scaleValues.py` — exclusive and reverse cumulative sums, vector normalization, masked mean, and the `RMSNorm` layer.
+- `torch_einops_kit/` — package source.
+- `torch_einops_kit/device.py` — device inference and input-routing decorators.
+- `torch_einops_kit/nn.py` — lightweight `torch.nn.Module` adapters and a `Sequential` constructor that ignores `None` modules.
+- `torch_einops_kit/save_load.py` — checkpoint save / load decorator and nested reconstruction helpers.
+- `torch_einops_kit/scaleValues.py` — exclusive and reverse cumulative sums, vector normalization, masked mean, and the `RMSNorm` layer.
 - `tests/` — regression tests and usage examples for helpers, masks, padding, device routing, and checkpoint reconstruction.
 
 ## Development
@@ -422,7 +422,7 @@ This repository is not a repackaged mirror of upstream. This repository makes a 
 Set up the repository:
 
 ```bash
-uv sync
+pip install --editable ".[development,testing]"
 ```
 
 Run the test suite:
