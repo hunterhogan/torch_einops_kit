@@ -49,8 +49,14 @@ development = ["pytest-cov"]
 testing = ["more-itertools", "numpy>=2.0.0", "pytest"]
 
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["torch_einops_kit"]
+
+[tool.setuptools.package-data]
+torch_einops_kit = ["py.typed"]
 
 [tool.coverage]
 report = { ignore_errors = false }
