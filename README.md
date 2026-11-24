@@ -419,16 +419,16 @@ This repository is not a repackaged mirror of upstream. This repository makes a 
 
 ## Development
 
-Set up the repository. Installing dependency groups requires `pip>=25.1`. The `dev` group includes the `testing` group:
+Set up the repository. Installing dependency groups requires `pip>=25.1`. The `development` group includes the `testing` group:
 
 ```bash
-pip install --group dev --editable .
+pip install --editable . --group development
 ```
 
 To install only what the test suite needs, use the `testing` group:
 
 ```bash
-pip install --group testing --editable .
+pip install --editable . --group testing
 ```
 
 Run the test suite:
