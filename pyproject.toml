@@ -45,12 +45,12 @@ Homepage = "https://github.com/hunterhogan/torch_einops_kit"
 Issues = "https://github.com/hunterhogan/torch_einops_kit/issues"
 Repository = "https://github.com/hunterhogan/torch_einops_kit.git"
 
-[project.optional-dependencies]
-development = ["pytest-cov"]
+[dependency-groups]
+development = [{ include-group = "testing" }, "pytest-cov"]
 testing = ["more-itertools", "numpy>=2.0.0", "pytest"]
 
 [build-system]
-requires = ["setuptools>=77"]
+requires = ["setuptools>=77.0.1"]
 build-backend = "setuptools.build_meta"
 
 [tool.coverage]
@@ -316,7 +316,7 @@ skip-magic-trailing-comma = true
 # === OK_EDIT: path-sync hunterhogan ===
 
 [tool.setuptools]
-packages = ["torch_einops_kit"]
+packages = { find = { include = ["torch_einops_kit", "torch_einops_kit.*"], namespaces = false } }
 
 [tool.setuptools.package-data]
 torch_einops_kit = ["py.typed"]
