@@ -45,8 +45,8 @@ Homepage = "https://github.com/hunterhogan/torch_einops_kit"
 Issues = "https://github.com/hunterhogan/torch_einops_kit/issues"
 Repository = "https://github.com/hunterhogan/torch_einops_kit.git"
 
-[project.optional-dependencies]
-development = ["pytest-cov"]
+[dependency-groups]
+dev = [{ include-group = "testing" }, "pytest-cov"]
 testing = ["more-itertools", "numpy>=2.0.0", "pytest"]
 
 [build-system]
